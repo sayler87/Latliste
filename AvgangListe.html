@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrer Avganger</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f3f4f6;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #1e3a8a;
+      font-size: 28px;
+    }
+
+    form {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      margin-bottom: 25px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    input, select {
+      margin-top: 6px;
+      padding: 10px;
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+      background: #f9fafb;
+      transition: all 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #2563eb;
+      background: #fff;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s ease-in-out, transform 0.1s;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .actions button {
+      width: auto;
+      padding: 6px 12px;
+      font-size: 13px;
+      margin-right: 5px;
+    }
+
+    .actions button:first-child {
+      background-color: #fbbf24;
+      color: #000;
+    }
+    .actions button:first-child:hover {
+      background-color: #d97706;
+      color: #fff;
+    }
+
+    .actions button:last-child {
+      background-color: #ef4444;
+    }
+    .actions button:last-child:hover {
+      background-color: #b91c1c;
+    }
+
+    #searchInput {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      width: 100%;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      display: block;
+      font-size: 15px;
+      background: #fff;
+    }
+
+    #departuresTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    #departuresTable th, #departuresTable td {
+      padding: 14px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+      font-size: 15px;
+    }
+
+    #departuresTable th {
+      background: #1e3a8a;
+      color: white;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    #departuresTable tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    #departuresTable tr:hover {
+      background-color: #eef2ff;
+    }
+
+    #currentDate {
+      text-align: center;
+      font-size: 17px;
+      font-weight: bold;
+      margin: 15px 0;
+      color: #111;
+    }
+
+    #toast {
+      visibility: hidden;
+      min-width: 250px;
+      margin-left: -125px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 10px;
+      padding: 16px;
+      position: fixed;
+      z-index: 100;
+      left: 50%;
+      bottom: 30px;
+      font-size: 15px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+    }
+
+    #toast.show {
+      visibility: visible;
+      -webkit-animation: fadein 0.4s, fadeout 0.4s 2.6s;
+      animation: fadein 0.4s, fadeout 0.4s 2.6s;
+    }
+
+    @keyframes fadein {
+      from { bottom: 0; opacity: 0; }
+      to { bottom: 30px; opacity: 1; }
+    }
+
+    @keyframes fadeout {
+      from { bottom: 30px; opacity: 1; }
+      to { bottom: 0; opacity: 0; }
+    }
+
+    .bottom-buttons {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .bottom-buttons button {
+      width: auto;
+      margin: 5px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+
+    .bottom-buttons button:nth-child(1) {
+      background: #ef4444;
+    }
+    .bottom-buttons button:nth-child(1):hover {
+      background: #b91c1c;
+    }
+
+    .bottom-buttons button:nth-child(2) {
+      background: #10b981;
+    }
+    .bottom-buttons button:nth-child(2):hover {
+      background: #047857;
+    }
+
+    @media print {
+      body * { visibility: hidden; }
+      #departuresTable, #departuresTable * { visibility: visible; }
+      #departuresTable { position: absolute; left: 0; top: 0; }
+      tr { page-break-inside: avoid; }
+    }
+
+    @media (max-width: 700px) {
+      form, #searchInput {
+        width: 95%;
+      }
+      #departuresTable th, #departuresTable td {
+        font-size: 13px;
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Registrer Avganger</h1>
+
+  <form id="departureForm">
+    <label for="unitNumber">Enhetsnummer:</label>
+    <input type="text" id="unitNumber" required>
+
+    <label for="destination">Destinasjon:</label>
+    <select id="destination" required>
+      <option value="" disabled selected>Velg destinasjon</option>
+      <option value="TRONDHEIM">TRONDHEIM</option>
+      <option value="ÅLESUND">ÅLESUND</option>
+      <option value="MOLDE">MOLDE</option>
+      <option value="FØRDE">FØRDE</option>
+      <option value="HAUGESUND">HAUGESUND</option>
+      <option value="STAVANGER">STAVANGER</option>
+    </select>
+
+    <label for="time">Tid:</label>
+    <input type="time" id="time" required>
+
+    <label for="gate">Luke:</label>
+    <input type="text" id="gate" required>
+
+     
+
+
+
+    <button type="submit">Registrer Avgang</button>
+  </form>
+
+  <input type="text" id="searchInput" placeholder="Søk på Enhetsnummer eller Destinasjon...">
+
+  <div id="currentDate"></div>
+
+  <table id="departuresTable">
+    <thead>
+      <tr>
+        <th>Enhetnummer</th>
+        <th>Luke</th>
+        <th>Avgangstid</th>
+        <th>Type</th>
+        <th>Destinasjon</th>
+        <th>Handlinger</th>
+      </tr>
+    </thead>
+    
+
+
+    <tbody></tbody>
+  </table>
+
+  <div class="bottom-buttons">
+    <button onclick="clearAllDepartures()">Tøm alle avganger</button>
+    <button onclick="window.print()">Skriv ut</button>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // === Variabler ===
+    const form = document.getElementById('departureForm');
+    const searchInput = document.getElementById('searchInput');
+    const departuresTableBody = document.querySelector('#departuresTable tbody');
+    const toast = document.getElementById('toast');
+
+    let departures = JSON.parse(localStorage.getItem('departures')) || [];
+    let editingIndex = null;
+
+    // === Vis dato ===
+    function updateCurrentDate() {
+      const now = new Date();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('currentDate').textContent = now.toLocaleDateString('nb-NO', options);
+    }
+
+    // === Vis avganger (med søk) ===
+    function displayDepartures() {
+      const searchTerm = searchInput.value.toLowerCase();
+      const tbody = document.querySelector('#departuresTable tbody');
+      tbody.innerHTML = '';
+
+      const filtered = departures.filter(d =>
+        d.unitNumber.toLowerCase().includes(searchTerm) ||
+        d.destination.toLowerCase().includes(searchTerm)
+      );
+
+      filtered.forEach((d, index) => {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${d.unitNumber}</td>
+          <td>${d.destination}</td>
+          <td>${d.time}</td>
+          <td>${d.gate}</td>
+          <td class="actions">
+            <button onclick="editDeparture(${departures.indexOf(d)})">Rediger</button>
+            <button onclick="deleteDeparture(${departures.indexOf(d)})">Slett</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // === Registrer/oppdater avgang ===
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const unitNumber = document.getElementById('unitNumber').value.trim().toUpperCase();
+      const destination = document.getElementById('destination').value.trim();
+      const time = document.getElementById('time').value;
+      const gate = document.getElementById('gate').value.trim();
+
+      if (!unitNumber || !destination || !time || !gate) {
+        showToast('Vennligst fyll ut alle feltene.', 'error');
+        return;
+      }
+
+      // Unngå duplikat ved ny registrering
+      if (editingIndex === null && departures.some(d => d.unitNumber === unitNumber)) {
+        showToast(`Enhetsnummer ${unitNumber} finnes allerede!`, 'info');
+        return;
+      }
+
+      const entry = { unitNumber, destination, time, gate };
+
+      if (editingIndex !== null) {
+        departures[editingIndex] = entry;
+        editingIndex = null;
+        form.querySelector('button[type="submit"]').textContent = 'Registrer Avgang';
+        showToast(`Avgang oppdatert!`, 'edit');
+      } else {
+        departures.push(entry);
+        showToast(`Avgang til ${destination} registrert!`, 'success');
+      }
+
+      localStorage.setItem('departures', JSON.stringify(departures));
+      displayDepartures();
+      form.reset();
+      document.getElementById('destination').selectedIndex = 0; // Setter tilbake til "Velg destinasjon"
+    });
+
+    // === Rediger avgang ===
+    function editDeparture(index) {
+      const d = departures[index];
+      document.getElementById('unitNumber').value = d.unitNumber;
+      document.getElementById('destination').value = d.destination;
+      document.getElementById('time').value = d.time;
+      document.getElementById('gate').value = d.gate;
+
+      editingIndex = index;
+      form.querySelector('button[type="submit"]').textContent = 'Oppdater avgang';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // === Slett avgang ===
+    function deleteDeparture(index) {
+      const destination = departures[index].destination;
+      if (confirm(`Slette avgang til ${destination}?`)) {
+        departures.splice(index, 1);
+        localStorage.setItem('departures', JSON.stringify(departures));
+        displayDepartures();
+        showToast('Avgang slettet!', 'delete');
+      }
+    }
+
+    // === Tøm alle avganger ===
+    function clearAllDepartures() {
+      if (departures.length === 0) {
+        showToast('Ingen avganger å slette.', 'info');
+        return;
+      }
+      if (confirm('Er du sikker på at du vil slette ALLE avganger?')) {
+        departures = [];
+        localStorage.removeItem('departures');
+        displayDepartures();
+        showToast('Alle avganger er tømt!', 'delete');
+      }
+    }
+
+    // === Vis toast-melding ===
+    function showToast(message, type) {
+      toast.textContent = message;
+      toast.className = ''; // Fjern gamle klasser
+
+      const bgColors = {
+        success: '#059669',
+        edit: '#0891b2',
+        delete: '#b91c1c',
+        info: '#d97706',
+        error: '#dc2626'
+      };
+      toast.style.backgroundColor = bgColors[type] || '#333';
+
+      toast.classList.add('show');
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // === Live-søk ===
+    searchInput.addEventListener('input', displayDepartures);
+
+    // === Stor bokstav i enhetsnummer ===
+    document.getElementById('unitNumber').addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+
+    // === Init ===
+    updateCurrentDate();
+    displayDepartures();
+  </script>
+</body>
+</html>
