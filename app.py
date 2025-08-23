@@ -10,4 +10,4 @@ else:
  html_code = html_file.read_text(encoding="utf-8")
  st.components.v1.html(html_code, height=900, scrolling=True)
 
-st.caption("Prikazano iz AvgangListe.html")
+st.caption("")
