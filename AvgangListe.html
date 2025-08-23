@@ -202,7 +202,6 @@
 
     #toast.show {
       visibility: visible;
-      -webkit-animation: fadein 0.4s, fadeout 0.4s 2.6s;
       animation: fadein 0.4s, fadeout 0.4s 2.6s;
     }
 
@@ -304,7 +303,8 @@
 
     .stat-card.type-bil { border-left-color: #10b981; background: #ecfdf5; }
     .stat-card.type-tog { border-left-color: #6366f1; background: #ede9fe; }
-    .stat-card.type-bil-tog { border-left-color: #f59e0b; background: #fffbeb; }
+    .stat-card.type-tralle { border-left-color: #f59e0b; background: #fffbeb; }
+    .stat-card.type-modul { border-left-color: #8b5cf6; background: #f3e8ff; }
 
     .stat-card h3 {
       margin: 0;
@@ -376,7 +376,7 @@
   </form>
 
   <!-- Søk og filter -->
-  <input type="text" id="searchInput" placeholder="">
+  <input type="text" id="searchInput" placeholder="Søk på enhetsnummer, destinasjon, type..." />
   
   <select id="filterDestination">
     <option value="">Vis alle destinasjoner</option>
@@ -435,30 +435,31 @@
     let currentSort = { key: null, asc: true };
     let typeChart, destinationChart;
 
-    // --- FIKS: Stor bokstav i enhetsnummer ---
+    // --- Stor bokstav i enhetsnummer ---
     document.getElementById('unitNumber').addEventListener('input', function(e) {
       e.target.value = e.target.value.toUpperCase();
     });
 
-    // --- FIKS: Vis dato ---
+    // --- Vis dagens dato ---
     function updateCurrentDate() {
       const now = new Date();
       const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
       document.getElementById('currentDate').textContent = now.toLocaleDateString('nb-NO', options);
     }
 
-    // --- FIKS: Søk + Filter + Sortering ---
+    // --- Vis avganger (med søk, filter, sortering) ---
     function displayDepartures() {
       const searchTerm = searchInput.value.toLowerCase();
       const selectedDest = filterDestination.value;
 
       // Filtrer
       const filtered = departures.filter(d => {
+        const comment = d.comment || '';
         const matchesSearch = 
           d.unitNumber.toLowerCase().includes(searchTerm) ||
           d.destination.toLowerCase().includes(searchTerm) ||
           d.type.toLowerCase().includes(searchTerm) ||
-          (d.comment && d.comment.toLowerCase().includes(searchTerm));
+          comment.toLowerCase().includes(searchTerm);
         const matchesFilter = !selectedDest || d.destination === selectedDest;
         return matchesSearch && matchesFilter;
       });
@@ -469,8 +470,8 @@
           let aVal = (a[currentSort.key] || '').toString();
           let bVal = (b[currentSort.key] || '').toString();
           if (currentSort.key === 'time') {
-            aVal = aVal.replace(':', '');
-            bVal = bVal.replace(':', '');
+            aVal = aVal ? aVal.replace(':', '') : '0000';
+            bVal = bVal ? bVal.replace(':', '') : '0000';
           }
           if (aVal < bVal) return currentSort.asc ? -1 : 1;
           if (aVal > bVal) return currentSort.asc ? 1 : -1;
@@ -481,17 +482,20 @@
       // Vis i tabell
       tableBody.innerHTML = '';
       filtered.forEach(d => {
+        const color = d.type === 'Tog' ? '#6366f1' :
+                     d.type === 'Bil' ? '#10b981' :
+                     d.type === 'Tralle' ? '#f59e0b' : '#8b5cf6';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${d.unitNumber}</td>
           <td>${d.destination}</td>
           <td>${d.time}</td>
           <td>${d.gate}</td>
-          <td><strong>${d.type}</strong></td>
+          <td><span style="color: ${color}"><strong>${d.type}</strong></span></td>
           <td>${d.comment ? d.comment : '<em>Ingen</em>'}</td>
           <td class="actions">
-            <button onclick="editDeparture(${departures.indexOf(d)})">Rediger</button>
-            <button onclick="deleteDeparture(${departures.indexOf(d)})">Slett</button>
+            <button onclick="editDeparture(${d.id})">Rediger</button>
+            <button onclick="deleteDeparture(${d.id})">Slett</button>
           </td>
         `;
         tableBody.appendChild(tr);
@@ -511,7 +515,7 @@
       });
     }
 
-    // --- Klikk på kolonne for sortering ---
+    // --- Sorter ved klikk ---
     document.querySelectorAll('#departuresTable th[data-sort]').forEach(th => {
       th.addEventListener('click', () => {
         const key = th.dataset.sort;
@@ -545,7 +549,9 @@
         return;
       }
 
-      const entry = { unitNumber, destination, time, gate, type, comment };
+      const id = editingIndex !== null ? departures[editingIndex].id : Date.now();
+      const entry = { id, unitNumber, destination, time, gate, type, comment };
+
       if (editingIndex !== null) {
         departures[editingIndex] = entry;
         editingIndex = null;
@@ -565,7 +571,8 @@
     });
 
     // --- Rediger / Slett ---
-    window.editDeparture = function(index) {
+    window.editDeparture = function(id) {
+      const index = departures.findIndex(d => d.id === id);
       const d = departures[index];
       document.getElementById('unitNumber').value = d.unitNumber;
       document.getElementById('destination').value = d.destination;
@@ -578,7 +585,9 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    window.deleteDeparture = function(index) {
+    window.deleteDeparture = function(id) {
+      const index = departures.findIndex(d => d.id === id);
+      if (index === -1) return;
       if (confirm(`Slette avgang til ${departures[index].destination}?`)) {
         departures.splice(index, 1);
         localStorage.setItem('departures', JSON.stringify(departures));
@@ -649,14 +658,13 @@
 
     // --- Statistikk og diagrammer ---
     function updateStats() {
-      const typeCount = { Tog: 0, Bil: 0, Tralle: 0,'Modul': 0 };
+      const typeCount = { Tog: 0, Bil: 0, Tralle: 0, Modul: 0 };
       const destCount = {};
       departures.forEach(d => {
         typeCount[d.type] = (typeCount[d.type] || 0) + 1;
         destCount[d.destination] = (destCount[d.destination] || 0) + 1;
       });
 
-      // Oppdater tall
       const statsGrid = document.getElementById('statsGrid');
       statsGrid.innerHTML = '';
       const addCard = (label, value, cls = '') => {
@@ -668,11 +676,10 @@
       addCard('Totalt', departures.length, 'total');
       addCard('Tog', typeCount.Tog, 'type-tog');
       addCard('Bil', typeCount.Bil, 'type-bil');
-      addCard('Tralle', typeCount['Tralle'], 'type-Tralle');
-      addCard('Modul', typeCount['Modul'], 'type-Modul');
+      addCard('Tralle', typeCount.Tralle, 'type-tralle');
+      addCard('Modul', typeCount.Modul, 'type-modul');
       Object.keys(destCount).sort().forEach(d => addCard(d, destCount[d]));
 
-      // Oppdater diagrammer
       updateCharts(typeCount, destCount);
     }
 
@@ -685,20 +692,30 @@
 
       typeChart = new Chart(document.getElementById('typeChart'), {
         type: 'pie',
-        data: { labels: tLabels, datasets: [{ data: tValues, backgroundColor: ['#6366f1', '#10b981', '#f59e0b'] }] },
+        data: { 
+          labels: tLabels, 
+          datasets: [{ 
+            data: tValues, 
+            backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6'] 
+          }] 
+        },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
       });
 
       destinationChart = new Chart(document.getElementById('destinationChart'), {
         type: 'bar',
-        data: { labels: dLabels, datasets: [{ label: 'Avganger', data: dValues, backgroundColor: '#2563eb' }] },
+        data: { 
+          labels: dLabels, 
+          datasets: [{ label: 'Avganger', data: dValues, backgroundColor: '#2563eb' }] 
+        },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
       });
     }
 
-    // --- Toast ---
+    // --- Toast med emoji ---
     function showToast(msg, type) {
-      toast.textContent = msg;
+      const icons = { success: '✅', edit: '✏️', delete: '🗑️', info: 'ℹ️', error: '❌' };
+      toast.textContent = `${icons[type] || '📢'} ${msg}`;
       toast.style.backgroundColor = {
         success: '#059669', edit: '#0891b2', delete: '#b91c1c', info: '#d97706', error: '#dc2626'
       }[type] || '#333';
@@ -710,7 +727,7 @@
     updateCurrentDate();
     displayDepartures();
 
-    // --- FIKS: Søk og filter lyttere ---
+    // --- Søk og filter ---
     searchInput.addEventListener('input', displayDepartures);
     filterDestination.addEventListener('change', displayDepartures);
   </script>
