@@ -649,7 +649,7 @@
 
     // --- Statistikk og diagrammer ---
     function updateStats() {
-      const typeCount = { Tog: 0, Bil: 0, 'Bil+Tog': 0 };
+      const typeCount = { Tog: 0, Bil: 0, Tralle: 0,'Modul': 0 };
       const destCount = {};
       departures.forEach(d => {
         typeCount[d.type] = (typeCount[d.type] || 0) + 1;
@@ -668,7 +668,8 @@
       addCard('Totalt', departures.length, 'total');
       addCard('Tog', typeCount.Tog, 'type-tog');
       addCard('Bil', typeCount.Bil, 'type-bil');
-      addCard('Bil+Tog', typeCount['Bil+Tog'], 'type-bil-tog');
+      addCard('Tralle', typeCount['Tralle'], 'type-Tralle');
+      addCard('Modul', typeCount['Modul'], 'type-Modul');
       Object.keys(destCount).sort().forEach(d => addCard(d, destCount[d]));
 
       // Oppdater diagrammer
