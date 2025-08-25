@@ -5,13 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registrer Avganger</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
+  <style>   
     body {
       font-family: "Segoe UI", Roboto, Arial, sans-serif;
       margin: 0;
       padding: 20px;
       background: #f3f4f6;
       color: #333;
+      display: flex;
+      min-height: 100vh;
     }
 
     h1 {
@@ -21,20 +23,36 @@
       font-size: 28px;
     }
 
-    form {
+    .container {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      gap: 20px;
+    }
+
+    .sidebar {
+      width: 300px;
       background: #fff;
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      margin-bottom: 25px;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
+      height: fit-content;
+      position: sticky;
+      top: 20px;
+    }
+
+    .main-content {
+      flex: 1;
+      max-width: 1000px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     label {
-      display: block;
-      margin-top: 12px;
       font-weight: 600;
       font-size: 14px;
       color: #374151;
@@ -319,11 +337,21 @@
     }
 
     @media print {
-      .chart-box, .stats-grid { display: none; }
+      .chart-box, .stats-grid, .sidebar { display: none; }
     }
 
-    @media (max-width: 700px) {
-      form, #searchInput, #filterDestination {
+    @media (max-width: 900px) {
+      .container {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        position: static;
+      }
+      .main-content {
+        width: 100%;
+      }
+      #searchInput, #filterDestination {
         width: 95%;
       }
       #departuresTable th, #departuresTable td {
@@ -337,88 +365,100 @@
   </style>
 </head>
 <body>
-  <h1>Registrer Avganger</h1>
+  <div class="container">
+    <div class="sidebar">
+      <h1>Registrer Avganger</h1>
+      <form id="departureForm">
+        <label for="unitNumber">Enhetsnummer:</label>
+        <input type="text" id="unitNumber" required>
 
-  <form id="departureForm">
-    <label for="unitNumber">Enhetsnummer:</label>
-    <input type="text" id="unitNumber" required>
+        <label for="destination">Destinasjon:</label>
+        <select id="destination" required>
+          <option value="" disabled selected>Velg destinasjon</option>
+          <option value="TRONDHEIM">TRONDHEIM</option>
+          <option value="ÅLESUND">ÅLESUND</option>
+          <option value="MOLDE">MOLDE</option>
+          <option value="FØRDE">FØRDE</option>
+          <option value="HAUGESUND">HAUGESUND</option>
+          <option value="STAVANGER">STAVANGER</option>
+        </select>
 
-    <label for="destination">Destinasjon:</label>
-    <select id="destination" required>
-      <option value="" disabled selected>Velg destinasjon</option>
-      <option value="TRONDHEIM">TRONDHEIM</option>
-      <option value="ÅLESUND">ÅLESUND</option>
-      <option value="MOLDE">MOLDE</option>
-      <option value="FØRDE">FØRDE</option>
-      <option value="HAUGESUND">HAUGESUND</option>
-      <option value="STAVANGER">STAVANGER</option>
-    </select>
+        <label for="time">Avgangstid:</label>
+        <input type="time" id="time" required>
 
-    <label for="time">Avgangstid:</label>
-    <input type="time" id="time" required>
+        <label for="gate">Luke:</label>
+        <input type="text" id="gate" required>
 
-    <label for="gate">Luke:</label>
-    <input type="text" id="gate" required>
+        <label for="type">Avgangstype:</label>
+        <select id="type" required>
+          <option value="" disabled selected>Velg type</option>
+          <option value="Tog">Tog</option>
+          <option value="Bil">Bil</option>
+          <option value="Tralle">Tralle</option>
+          <option value="Modul">Modul</option>
+        </select>
 
-    <label for="type">Avgangstype:</label>
-    <select id="type" required>
-      <option value="" disabled selected>Velg type</option>
-      <option value="Tog">Tog</option>
-      <option value="Bil">Bil</option>
-      <option value="Tralle">Tralle</option>
-      <option value="Modul">Modul</option>
-    </select>
+        <label for="status">Status:</label>
+        <select id="status" required>
+          <option value="" disabled selected>Velg status</option>
+          <option value="Levert">Levert</option>
+          <option value="I lager">I lager</option>
+          <option value="Underlasting">Underlasting</option>
+        </select>
 
-    <label for="comment">Kommentar (valgfritt):</label>
-    <textarea id="comment" rows="2" placeholder="F.eks. 'Forsinket', 'Lastebil venter'..."></textarea>
+        <label for="comment">Kommentar (valgfritt):</label>
+        <textarea id="comment" rows="2" placeholder="F.eks. 'Forsinket', 'Lastebil venter'..."></textarea>
 
-    <button type="submit">Registrer Avgang</button>
-  </form>
-
-  <!-- Søk og filter -->
-  <input type="text" id="searchInput" placeholder="Søk på enhetsnummer, destinasjon, type..." />
-  
-  <select id="filterDestination">
-    <option value="">Vis alle destinasjoner</option>
-    <option value="TRONDHEIM">TRONDHEIM</option>
-    <option value="ÅLESUND">ÅLESUND</option>
-    <option value="MOLDE">MOLDE</option>
-    <option value="FØRDE">FØRDE</option>
-    <option value="HAUGESUND">HAUGESUND</option>
-    <option value="STAVANGER">STAVANGER</option>
-  </select>
-
-  <div id="currentDate"></div>
-
-  <table id="departuresTable">
-    <thead>
-      <tr>
-        <th data-sort="unitNumber">Enhetsnummer</th>
-        <th data-sort="destination">Destinasjon</th>
-        <th data-sort="time">Avgangstid</th>
-        <th data-sort="gate">Luke</th>
-        <th data-sort="type">Type</th>
-        <th data-sort="comment">Kommentar</th>
-        <th>Handlinger</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <div class="stats-container">
-    <div class="stats-title">📊 Statistikk og diagrammer</div>
-    <div class="charts-row">
-      <div class="chart-box"><canvas id="typeChart"></canvas></div>
-      <div class="chart-box"><canvas id="destinationChart"></canvas></div>
+        <button type="submit">Registrer Avgang</button>
+      </form>
     </div>
-    <div class="stats-grid" id="statsGrid"></div>
-  </div>
 
-  <div class="bottom-buttons">
-    <button onclick="clearAllDepartures()">Tøm alle avganger</button>
-    <button onclick="window.print()">Skriv ut</button>
-    <button onclick="exportToCSV()">Eksporter til CSV</button>
-    <button onclick="backupData()">Last ned backup (JSON)</button>
+    <div class="main-content">
+      <input type="text" id="searchInput" placeholder="Søk på enhetsnummer, destinasjon, type..." />
+      <select id="filterDestination">
+        <option value="">Vis alle destinasjoner</option>
+        <option value="TRONDHEIM">TRONDHEIM</option>
+        <option value="ÅLESUND">ÅLESUND</option>
+        <option value="MOLDE">MOLDE</option>
+        <option value="FØRDE">FØRDE</option>
+        <option value="HAUGESUND">HAUGESUND</option>
+        <option value="STAVANGER">STAVANGER</option>
+      </select>
+
+      <div id="currentDate"></div>
+
+      <table id="departuresTable">
+        <thead>
+          <tr>
+            <th data-sort="unitNumber">Enhetsnummer</th>
+            <th data-sort="destination">Destinasjon</th>
+            <th data-sort="time">Avgangstid</th>
+            <th data-sort="gate">Luke</th>
+            <th data-sort="type">Type</th>
+            <th data-sort="status">Status</th>
+            <th data-sort="comment">Kommentar</th>
+            <th>Handlinger</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="stats-container">
+        <div class="stats-title">📊 Statistikk og diagrammer</div>
+        <div class="charts-row">
+          <div class="chart-box"><canvas id="typeChart"></canvas></div>
+          <div class="chart-box"><canvas id="destinationChart"></canvas></div>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+      </div>
+
+      <div class="bottom-buttons">
+        <button onclick="clearAllDepartures()">Tøm alle avganger</button>
+        <button onclick="window.print()">Skriv ut</button>
+        <button onclick="exportToCSV()">Eksporter til CSV</button>
+        <button onclick="backupData()">Last ned backup (JSON)</button>
+      </div>
+    </div>
   </div>
 
   <div id="toast"></div>
@@ -430,35 +470,65 @@
     const tableBody = document.querySelector('#departuresTable tbody');
     const toast = document.getElementById('toast');
 
-    let departures = JSON.parse(localStorage.getItem('departures')) || [];
+    let departures = [];
     let editingIndex = null;
     let currentSort = { key: null, asc: true };
     let typeChart, destinationChart;
 
-    // --- Stor bokstav i enhetsnummer ---
+    // Last inn data fra localStorage
+    function loadFromStorage() {
+      try {
+        const saved = localStorage.getItem('departures');
+        departures = saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        console.error('Feil ved lasting fra localStorage:', e);
+        departures = [];
+      }
+    }
+
+    // Lagre til localStorage
+    function saveToStorage() {
+      try {
+        localStorage.setItem('departures', JSON.stringify(departures));
+      } catch (e) {
+        console.error('Feil ved lagring til localStorage:', e);
+        showToast('Kunne ikke lagre data (lagringsplass full?)', 'error');
+      }
+    }
+
+    // Auto-last data
+    loadFromStorage();
+
+    // Auto-updatering hvert 30. sekund
+    setInterval(() => {
+      displayDepartures();
+      updateStats();
+    }, 30000);
+
+    // Konverter enhetsnummer til store bokstaver
     document.getElementById('unitNumber').addEventListener('input', function(e) {
       e.target.value = e.target.value.toUpperCase();
     });
 
-    // --- Vis dagens dato ---
+    // Vis nåværende dato
     function updateCurrentDate() {
       const now = new Date();
       const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
       document.getElementById('currentDate').textContent = now.toLocaleDateString('nb-NO', options);
     }
 
-    // --- Vis avganger (med søk, filter, sortering) ---
+    // Vis avganger
     function displayDepartures() {
       const searchTerm = searchInput.value.toLowerCase();
       const selectedDest = filterDestination.value;
 
-      // Filtrer
       const filtered = departures.filter(d => {
         const comment = d.comment || '';
         const matchesSearch = 
           d.unitNumber.toLowerCase().includes(searchTerm) ||
           d.destination.toLowerCase().includes(searchTerm) ||
           d.type.toLowerCase().includes(searchTerm) ||
+          d.status.toLowerCase().includes(searchTerm) ||
           comment.toLowerCase().includes(searchTerm);
         const matchesFilter = !selectedDest || d.destination === selectedDest;
         return matchesSearch && matchesFilter;
@@ -470,8 +540,8 @@
           let aVal = (a[currentSort.key] || '').toString();
           let bVal = (b[currentSort.key] || '').toString();
           if (currentSort.key === 'time') {
-            aVal = aVal ? aVal.replace(':', '') : '0000';
-            bVal = bVal ? bVal.replace(':', '') : '0000';
+            aVal = aVal.replace(':', '') || '0000';
+            bVal = bVal.replace(':', '') || '0000';
           }
           if (aVal < bVal) return currentSort.asc ? -1 : 1;
           if (aVal > bVal) return currentSort.asc ? 1 : -1;
@@ -482,16 +552,19 @@
       // Vis i tabell
       tableBody.innerHTML = '';
       filtered.forEach(d => {
-        const color = d.type === 'Tog' ? '#6366f1' :
-                     d.type === 'Bil' ? '#10b981' :
-                     d.type === 'Tralle' ? '#f59e0b' : '#8b5cf6';
+        const typeColor = d.type === 'Tog' ? '#6366f1' :
+                         d.type === 'Bil' ? '#10b981' :
+                         d.type === 'Tralle' ? '#f59e0b' : '#8b5cf6';
+        const statusColor = d.status === 'Levert' ? '#10b981' :
+                           d.status === 'I lager' ? '#2563eb' : '#f59e0b';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${d.unitNumber}</td>
           <td>${d.destination}</td>
           <td>${d.time}</td>
           <td>${d.gate}</td>
-          <td><span style="color: ${color}"><strong>${d.type}</strong></span></td>
+          <td><span style="color: ${typeColor}"><strong>${d.type}</strong></span></td>
+          <td><span style="color: ${statusColor}"><strong>${d.status}</strong></span></td>
           <td>${d.comment ? d.comment : '<em>Ingen</em>'}</td>
           <td class="actions">
             <button onclick="editDeparture(${d.id})">Rediger</button>
@@ -502,10 +575,9 @@
       });
 
       updateSortIndicators();
-      updateStats();
     }
 
-    // --- Sorteringspil ---
+    // Oppdater sorteringsindikatorer
     function updateSortIndicators() {
       document.querySelectorAll('#departuresTable th[data-sort]').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
@@ -515,13 +587,12 @@
       });
     }
 
-    // --- Sorter ved klikk ---
+    // Sorter ved klikk
     document.querySelectorAll('#departuresTable th[data-sort]').forEach(th => {
       th.addEventListener('click', () => {
         const key = th.dataset.sort;
         if (currentSort.key === key) {
           currentSort.asc = !currentSort.asc;
-          if (!currentSort.asc && currentSort.key) currentSort = { key: null, asc: true };
         } else {
           currentSort = { key, asc: true };
         }
@@ -529,7 +600,7 @@
       });
     });
 
-    // --- Registrer avgang ---
+    // Registrer avgang
     form.addEventListener('submit', e => {
       e.preventDefault();
       const unitNumber = document.getElementById('unitNumber').value.trim().toUpperCase();
@@ -537,9 +608,10 @@
       const time = document.getElementById('time').value;
       const gate = document.getElementById('gate').value.trim();
       const type = document.getElementById('type').value;
+      const status = document.getElementById('status').value;
       const comment = document.getElementById('comment').value.trim() || null;
 
-      if (!unitNumber || !destination || !time || !gate || !type) {
+      if (!unitNumber || !destination || !time || !gate || !type || !status) {
         showToast('Vennligst fyll ut alle feltene.', 'error');
         return;
       }
@@ -550,7 +622,7 @@
       }
 
       const id = editingIndex !== null ? departures[editingIndex].id : Date.now();
-      const entry = { id, unitNumber, destination, time, gate, type, comment };
+      const entry = { id, unitNumber, destination, time, gate, type, status, comment };
 
       if (editingIndex !== null) {
         departures[editingIndex] = entry;
@@ -562,41 +634,55 @@
         showToast('Registrert!', 'success');
       }
 
-      localStorage.setItem('departures', JSON.stringify(departures));
+      saveToStorage();
       displayDepartures();
+      updateStats();
+
+      // Nullstill skjema
       form.reset();
       document.getElementById('destination').selectedIndex = 0;
       document.getElementById('type').selectedIndex = 0;
+      document.getElementById('status').selectedIndex = 0;
       document.getElementById('comment').value = '';
     });
 
-    // --- Rediger / Slett ---
+    // Rediger avgang
     window.editDeparture = function(id) {
       const index = departures.findIndex(d => d.id === id);
+      if (index === -1) {
+        showToast('Avgang ikke funnet.', 'error');
+        return;
+      }
       const d = departures[index];
       document.getElementById('unitNumber').value = d.unitNumber;
       document.getElementById('destination').value = d.destination;
       document.getElementById('time').value = d.time;
       document.getElementById('gate').value = d.gate;
       document.getElementById('type').value = d.type;
+      document.getElementById('status').value = d.status;
       document.getElementById('comment').value = d.comment || '';
       editingIndex = index;
       form.querySelector('button[type="submit"]').textContent = 'Oppdater avgang';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    // Slett avgang
     window.deleteDeparture = function(id) {
       const index = departures.findIndex(d => d.id === id);
-      if (index === -1) return;
+      if (index === -1) {
+        showToast('Avgang ikke funnet.', 'error');
+        return;
+      }
       if (confirm(`Slette avgang til ${departures[index].destination}?`)) {
         departures.splice(index, 1);
-        localStorage.setItem('departures', JSON.stringify(departures));
+        saveToStorage();
         displayDepartures();
+        updateStats();
         showToast('Slettet!', 'delete');
       }
     };
 
-    // --- Tøm alle ---
+    // Tøm alle
     window.clearAllDepartures = function() {
       if (departures.length === 0) {
         showToast('Ingen avganger.', 'info');
@@ -606,17 +692,18 @@
         departures = [];
         localStorage.removeItem('departures');
         displayDepartures();
+        updateStats();
         showToast('Tømt!', 'delete');
       }
     };
 
-    // --- Eksport CSV ---
+    // Eksporter til CSV
     function exportToCSV() {
       if (departures.length === 0) {
         showToast('Ingen data å eksportere.', 'info');
         return;
       }
-      const headers = ['Enhetsnummer', 'Destinasjon', 'Avgangstid', 'Luke', 'Type', 'Kommentar'];
+      const headers = ['Enhetsnummer', 'Destinasjon', 'Avgangstid', 'Luke', 'Type', 'Status', 'Kommentar'];
       const csv = [
         headers.join(';'),
         ...departures.map(d => [
@@ -625,6 +712,7 @@
           d.time,
           d.gate,
           d.type,
+          d.status,
           `"${(d.comment || '').replace(/"/g, '""')}"`
         ].join(';'))
       ].join('\n');
@@ -639,7 +727,7 @@
       showToast('Eksportert!', 'success');
     }
 
-    // --- Backup JSON ---
+    // Backup til JSON
     function backupData() {
       if (departures.length === 0) {
         showToast('Ingen data å sikre.', 'info');
@@ -656,12 +744,15 @@
       showToast('Backup lagret!', 'success');
     }
 
-    // --- Statistikk og diagrammer ---
+    // Statistikk
     function updateStats() {
       const typeCount = { Tog: 0, Bil: 0, Tralle: 0, Modul: 0 };
+      const statusCount = { 'Levert': 0, 'I lager': 0, 'Underlasting': 0 };
       const destCount = {};
+
       departures.forEach(d => {
         typeCount[d.type] = (typeCount[d.type] || 0) + 1;
+        statusCount[d.status] = (statusCount[d.status] || 0) + 1;
         destCount[d.destination] = (destCount[d.destination] || 0) + 1;
       });
 
@@ -678,41 +769,72 @@
       addCard('Bil', typeCount.Bil, 'type-bil');
       addCard('Tralle', typeCount.Tralle, 'type-tralle');
       addCard('Modul', typeCount.Modul, 'type-modul');
+      addCard('Levert', statusCount['Levert'], 'type-bil');
+      addCard('I lager', statusCount['I lager'], 'type-tog');
+      addCard('Underlasting', statusCount['Underlasting'], 'type-tralle');
       Object.keys(destCount).sort().forEach(d => addCard(d, destCount[d]));
 
-      updateCharts(typeCount, destCount);
+      updateCharts(typeCount, statusCount, destCount);
     }
 
-    function updateCharts(typeData, destData) {
-      const tLabels = Object.keys(typeData), tValues = Object.values(typeData);
-      const dLabels = Object.keys(destData), dValues = Object.values(destData);
+    function updateCharts(typeData, statusData, destData) {
+      const tLabels = Object.keys(typeData);
+      const tValues = Object.values(typeData);
+      const dLabels = Object.keys(destData);
+      const dValues = Object.values(destData);
 
       if (typeChart) typeChart.destroy();
       if (destinationChart) destinationChart.destroy();
 
       typeChart = new Chart(document.getElementById('typeChart'), {
         type: 'pie',
-        data: { 
-          labels: tLabels, 
-          datasets: [{ 
-            data: tValues, 
-            backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6'] 
-          }] 
+        data: {
+          labels: tLabels,
+          datasets: [{
+            data: tValues,
+            backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6'],
+            borderColor: '#ffffff',
+            borderWidth: 1
+          }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: true, text: 'Avganger per Type' }
+          }
+        }
       });
 
       destinationChart = new Chart(document.getElementById('destinationChart'), {
         type: 'bar',
-        data: { 
-          labels: dLabels, 
-          datasets: [{ label: 'Avganger', data: dValues, backgroundColor: '#2563eb' }] 
+        data: {
+          labels: dLabels,
+          datasets: [{
+            label: 'Avganger',
+            data: dValues,
+            backgroundColor: '#2563eb',
+            borderColor: '#1e3a8a',
+            borderWidth: 1
+          }]
         },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Antall Avganger' } },
+            x: { title: { display: true, text: 'Destinasjon' } }
+          },
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: 'Avganger per Destinasjon' }
+          }
+        }
       });
     }
 
-    // --- Toast med emoji ---
+    // Vis toast
     function showToast(msg, type) {
       const icons = { success: '✅', edit: '✏️', delete: '🗑️', info: 'ℹ️', error: '❌' };
       toast.textContent = `${icons[type] || '📢'} ${msg}`;
@@ -723,11 +845,12 @@
       setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    // --- Init ---
+    // Initialisering
     updateCurrentDate();
     displayDepartures();
+    updateStats();
 
-    // --- Søk og filter ---
+    // Søk og filter
     searchInput.addEventListener('input', displayDepartures);
     filterDestination.addEventListener('change', displayDepartures);
   </script>
