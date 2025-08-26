@@ -224,20 +224,21 @@ if st.session_state.departures:
 
     with col1:
         st.subheader("Avganger per Type")
-        type_counts = df_full["type"].value_counts()
-        fig1, ax1 = plt.subplots()
-        colors = ["#e74c3c", "#f39c12", "#3498db", "#9b59b6"]
-        ax1.pie(type_counts, labels=[f"{TYPE_ICONS.get(t, '')} {t}" for t in type_counts.index], autopct='%1.1f%%', colors=colors)
-        st.pyplot(fig1)
+        type_counts = df_full["type"].value_counts().reset_index()
+        type_counts.columns = ["type", "count"]
+        type_counts["icon"] = type_counts["type"].map(TYPE_ICONS)
+        type_counts["label"] = type_counts["icon"] + " " + type_counts["type"]
+
+        fig1 = px.pie(type_counts, values="count", names="label", title="Per Type")
+        st.plotly_chart(fig1, use_container_width=True)
 
     with col2:
         st.subheader("Avganger per Destinasjon")
-        dest_counts = df_full["destination"].value_counts()
-        fig2, ax2 = plt.subplots()
-        ax2.bar(dest_counts.index, dest_counts.values, color="#3498db")
-        ax2.set_ylabel("Antall")
-        plt.xticks(rotation=45)
-        st.pyplot(fig2)
+        dest_counts = df_full["destination"].value_counts().reset_index()
+        dest_counts.columns = ["destination", "count"]
+
+        fig2 = px.bar(dest_counts, x="destination", y="count", title="Per Destinasjon", color="count", color_continuous_scale="Blues")
+        st.plotly_chart(fig2, use_container_width=True)
 
     # Statistikk-kort
     st.subheader("Statistikk")
