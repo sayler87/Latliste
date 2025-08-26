@@ -18,23 +18,22 @@ TYPE_ICONS = {
 
 DESTINATIONS = ["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"]
 
-# Last data
+# --- LAST DATA ---
 def load_data():
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                # Sikre at alle poster har ID
-                for item in data:  # <-- NÅ RIKTIG
+                for item in   # Sikrer ID
                     if "id" not in item:
                         item["id"] = int(datetime.now().timestamp())
                 return data
         except Exception as e:
-            st.warning(f"Kunne ikke lese  {e}")
+            st.warning(f"Feil ved lasting: {e}")
             return []
     return []
 
-# Lagre data
+# --- LAGRE DATA ---
 def save_data(data):
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -42,26 +41,27 @@ def save_data(data):
     except Exception as e:
         st.error(f"Lagring feilet: {e}")
 
-# Initialiser session state
+# --- SESSION STATE ---
 if 'departures' not in st.session_state:
     st.session_state.departures = load_data()
 
 if 'editing_id' not in st.session_state:
     st.session_state.editing_id = None
 
-# Tittel
+# --- TITTEL ---
 st.markdown("<h1 style='text-align: center;'>🚛 Transportsystem</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #666;'>Registrering og oversikt over avganger</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# --- SKJEMA I SIDEBAR ---
-st.sidebar.header("🚛 Registrer Avgang")
+# === SIDEBAR: SKJEMA ===
+st.sidebar.header("🚛 Registrer / Oppdater Avgang")
 
-# Hent redigeringsdata hvis eksisterer
+# Hent redigeringsdata
 editing = None
 if st.session_state.editing_id is not None:
     editing = next((d for d in st.session_state.departures if d["id"] == st.session_state.editing_id), None)
 
+# Skjema-felter
 unit_number = st.sidebar.text_input(
     "Enhetsnummer *",
     value=editing["unitNumber"].upper() if editing else "",
@@ -102,7 +102,7 @@ comment = st.sidebar.text_area(
     value=editing["comment"] if editing and editing["comment"] else ""
 )
 
-# Knapp for registrering/opdatering
+# Knapp: Registrer / Oppdater
 if st.sidebar.button("✅ Registrer Avgang" if not editing else "🔁 Oppdater Avgang"):
     if not all([unit_number, destination, time, gate, type_, status]):
         st.sidebar.error("Vennligst fyll ut alle obligatoriske felt.")
@@ -130,7 +130,7 @@ if st.sidebar.button("✅ Registrer Avgang" if not editing else "🔁 Oppdater A
             st.success(f"✅ Avgang {unit_number} registrert!")
 
         save_data(st.session_state.departures)
-        st.rerun()  # Bruk st.rerun() i nyere Streamlit
+        st.rerun()
 
 # Avbryt redigering
 if st.session_state.editing_id is not None:
@@ -140,28 +140,29 @@ if st.session_state.editing_id is not None:
 
 st.sidebar.markdown("---")
 
-# --- SØK OG FILTRERING ---
+# === HOVEDINNHOLD: OVERSIKT ===
 st.header("📋 Oversikt over Avganger")
 
-search_term = st.text_input("Søk på enhetsnummer eller destinasjon...")
-selected_dest = st.selectbox("Filtrer på destinasjon", ["Alle destinasjoner"] + DESTINATIONS)
+# Søk og filtrering
+col1, col2 = st.columns([3, 1])
+with col1:
+    search_term = st.text_input("Søk på enhetsnummer eller destinasjon", "")
+with col2:
+    selected_dest = st.selectbox("Destinasjon", ["Alle destinasjoner"] + DESTINATIONS)
 
-# Filtrer data
-filtered = [d for d in st.session_state.departures]
+# Filtrer
+filtered = st.session_state.departures
 if search_term:
     filtered = [d for d in filtered if search_term.lower() in d["unitNumber"].lower() or search_term.lower() in d["destination"].lower()]
 if selected_dest != "Alle destinasjoner":
     filtered = [d for d in filtered if d["destination"] == selected_dest]
 
-# Konverter til DataFrame
+# Vis tabell med handlinger
 if filtered:
     df = pd.DataFrame(filtered)
-    df = df[["unitNumber", "destination", "time", "gate", "type", "status", "comment"]]
-else:
-    df = pd.DataFrame(columns=["unitNumber", "destination", "time", "gate", "type", "status", "comment"])
+    df = df[["id", "unitNumber", "destination", "time", "gate", "type", "status", "comment"]]
 
-# Vis tabell
-if not df.empty:
+    # Legg til kolonner for visning
     def format_row(row):
         icon = TYPE_ICONS.get(row["type"], "")
         t_color = {"Tog": "red", "Bil": "orange", "Tralle": "blue", "Modul": "purple"}.get(row["type"], "black")
@@ -174,16 +175,58 @@ if not df.empty:
             row["gate"],
             f'<span style="color:{t_color}; font-weight:bold;">{icon} {row["type"]}</span>',
             f'<span style="color:{s_color}; font-weight:bold;">{row["status"]}</span>',
-            comment
+            comment,
+            f"""
+            <div style="display: flex; gap: 5px;">
+                <button onclick="window.location.reload()" style="padding:5px 10px; font-size:12px;">✏️ Rediger</button>
+                <button onclick="window.location.reload()" style="padding:5px 10px; font-size:12px;">🗑️ Slett</button>
+            </div>
+            """
         ])
 
-    styled_df = df.apply(format_row, axis=1)
-    styled_df.columns = ["Enhetsnummer", "Destinasjon", "Tid", "Luke", "Type", "Status", "Kommentar"]
-    st.markdown(styled_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+    # Men: Streamlit tillater IKKE onclick i HTML
+    # Derfor bruker vi st.form + st.button i en løkke
+    st.markdown("""
+    <style>
+    .action-btn { padding: 5px 10px; font-size: 12px; margin: 2px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    for idx, d in enumerate(filtered):
+        cols = st.columns([2, 2, 2, 1, 1, 1, 1, 2])
+        cols[0].write(d["unitNumber"])
+        cols[1].write(d["destination"])
+        cols[2].write(d["time"])
+        cols[3].write(d["gate"])
+        cols[4].markdown(
+            f'<span style="color:{{"Tog": "red", "Bil": "orange", "Tralle": "blue", "Modul": "purple"}}.get("{d["type"]}", "black")}; font-weight:bold;">'
+            f'{TYPE_ICONS.get(d["type"], "")} {d["type"]}</span>',
+            unsafe_allow_html=True
+        )
+        cols[5].markdown(
+            f'<span style="color:{{"Levert": "green", "I lager": "blue", "Underlasting": "orange"}}.get("{d["status"]}", "black")}; font-weight:bold;">'
+            f'{d["status"]}</span>',
+            unsafe_allow_html=True
+        )
+        cols[6].write(d["comment"] or "*Ingen*")
+
+        with cols[7]:
+            # REDIGER KNAPP
+            if st.button(f"✏️", key=f"edit_{d['id']}", help="Rediger"):
+                st.session_state.editing_id = d["id"]
+                st.rerun()
+
+            # SLETT KNAPP
+            if st.button(f"🗑️", key=f"del_{d['id']}", help="Slett"):
+                st.session_state.departures = [x for x in st.session_state.departures if x["id"] != d["id"]]
+                save_data(st.session_state.departures)
+                st.success(f"✅ Avgang {d['unitNumber']} slettet!")
+                st.rerun()
+
 else:
     st.info("Ingen avganger funnet.")
 
-# --- HANDLINGSKNAPPER ---
+# === SYSTEMHANDLINGER ===
 st.markdown("---")
 st.header("⚙️ Systemhandlinger")
 
@@ -192,34 +235,34 @@ col1, col2, col3, col4 = st.columns(4)
 with col1:
     if st.button("🗑️ Tøm alle avganger"):
         if st.session_state.departures:
-            if st.checkbox("✅ Bekreft: Slett ALLE", key="confirm_clear"):
+            if st.checkbox("✅ Bekreft: Slett ALT", key="confirm_clear_all"):
                 st.session_state.departures = []
                 save_data(st.session_state.departures)
-                st.success("✅ Alle avganger slettet!")
+                st.success("✅ Alt er tømt!")
                 st.rerun()
         else:
             st.warning("Ingen avganger å slette.")
 
 with col2:
     if st.button("🖨️ Skriv ut"):
-        st.info("Bruk nettleserens utskrift (Ctrl+P).")
+        st.info("Bruk Ctrl+P for å skrive ut siden (nettleserens utskrift).")
 
 with col3:
     if st.button("📄 Eksporter til CSV"):
-        export_df = pd.DataFrame(st.session_state.departures)
-        csv = export_df.to_csv(index=False, encoding='utf-8')
+        df_export = pd.DataFrame(st.session_state.departures)
+        csv = df_export.to_csv(index=False, encoding='utf-8')
         b64 = base64.b64encode(csv.encode()).decode()
-        href = f'<a href="text/csv;base64,{b64}" download="avganger.csv">⬇️ Last ned CSV</a>'
+        href = f'<a href="data:text/csv;base64,{b64}" download="avganger.csv">⬇️ Last ned CSV</a>'
         st.markdown(href, unsafe_allow_html=True)
 
 with col4:
     if st.button("💾 Last ned JSON"):
         json_str = json.dumps(st.session_state.departures, ensure_ascii=False, indent=2)
         b64 = base64.b64encode(json_str.encode()).decode()
-        href = f'<a href="application/json;base64,{b64}" download="backup.json">⬇️ Last ned JSON</a>'
+        href = f'<a href="data:application/json;base64,{b64}" download="backup.json">⬇️ Last ned JSON</a>'
         st.markdown(href, unsafe_allow_html=True)
 
-# --- STATISTIKK OG DIAGRAMMER ---
+# === STATISTIKK ===
 st.markdown("---")
 st.header("📊 Statistikk og Diagrammer")
 
@@ -232,50 +275,35 @@ if st.session_state.departures:
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("Avganger per Type")
+            st.subheader("Per Type")
             type_counts = df_full["type"].value_counts().reset_index()
             type_counts.columns = ["type", "count"]
             type_counts["label"] = type_counts["type"].map(lambda t: f"{TYPE_ICONS.get(t, '')} {t}")
-            fig1 = px.pie(type_counts, values="count", names="label", title="Fordeling etter type",
-                          color_discrete_sequence=px.colors.qualitative.Pastel)
+            fig1 = px.pie(type_counts, values="count", names="label", color_discrete_sequence=px.colors.qualitative.Pastel)
             st.plotly_chart(fig1, use_container_width=True)
 
         with col2:
-            st.subheader("Avganger per Destinasjon")
+            st.subheader("Per Destinasjon")
             dest_counts = df_full["destination"].value_counts().reset_index()
             dest_counts.columns = ["destination", "count"]
-            fig2 = px.bar(dest_counts, x="destination", y="count", title="Fordeling etter destinasjon",
-                          color="count", color_continuous_scale="Blues")
+            fig2 = px.bar(dest_counts, x="destination", y="count", color="count", color_continuous_scale="Blues")
             st.plotly_chart(fig2, use_container_width=True)
 
-        # Nøkkeltall
         c1, c2, c3 = st.columns(3)
         c1.metric("Totalt", len(df_full))
         c2.metric("Levert", int((df_full["status"] == "Levert").sum()))
         c3.metric("I lager", int((df_full["status"] == "I lager").sum()))
 
     except ImportError:
-        st.warning("""
-        ❌ **Kan ikke vise diagrammer: `plotly` er ikke installert.**  
-        
-        For å fikse dette:
-        1. Opprett en fil kalt `requirements.txt`
-        2. Legg til:
-           ```
-           streamlit
-           pandas
-           plotly
-           ```
-        3. Last opp begge filene.
-        """)
+        st.warning("Installer `plotly` for diagrammer: legg til i `requirements.txt`")
 
 else:
     st.info("Ingen data tilgjengelig for statistikk.")
 
-# --- Footer ---
+# === FOOTER ===
 st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown(
     f"<p style='text-align: center; color: #888; font-size: 0.9em;'>"
-    f"Generert: {datetime.now().strftime('%d.%m.%Y kl. %H:%M')}</p>",
+    f"Utskriftsdato: {datetime.now().strftime('%d.%m.%Y kl. %H:%M')}</p>",
     unsafe_allow_html=True
 )
