@@ -25,7 +25,7 @@ def load_data():
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 # Sikre at alle poster har ID
-                for item in 
+                for item in data:  # <-- NÅ RIKTIG: går gjennom 'data'
                     if "id" not in item:
                         item["id"] = int(datetime.now().timestamp())
                 return data
@@ -132,7 +132,7 @@ if st.sidebar.button("✅ Registrer Avgang" if not editing else "🔁 Oppdater A
         save_data(st.session_state.departures)
         st.experimental_rerun()
 
-# Knapp for å avbryt redigering
+# Avbryt redigering
 if st.session_state.editing_id is not None:
     if st.sidebar.button("❌ Avbryt redigering"):
         st.session_state.editing_id = None
@@ -160,7 +160,7 @@ if filtered:
 else:
     df = pd.DataFrame(columns=["unitNumber", "destination", "time", "gate", "type", "status", "comment"])
 
-# Vis tabell med ikoner og farger
+# Vis tabell
 if not df.empty:
     def format_row(row):
         icon = TYPE_ICONS.get(row["type"], "")
@@ -209,14 +209,14 @@ with col3:
         export_df = pd.DataFrame(st.session_state.departures)
         csv = export_df.to_csv(index=False, encoding='utf-8')
         b64 = base64.b64encode(csv.encode()).decode()
-        href = f'<a href="data:text/csv;base64,{b64}" download="avganger.csv">⬇️ Last ned CSV</a>'
+        href = f'<a href="text/csv;base64,{b64}" download="avganger.csv">⬇️ Last ned CSV</a>'
         st.markdown(href, unsafe_allow_html=True)
 
 with col4:
     if st.button("💾 Last ned JSON"):
         json_str = json.dumps(st.session_state.departures, ensure_ascii=False, indent=2)
         b64 = base64.b64encode(json_str.encode()).decode()
-        href = f'<a href="data:application/json;base64,{b64}" download="backup.json">⬇️ Last ned JSON</a>'
+        href = f'<a href="application/json;base64,{b64}" download="backup.json">⬇️ Last ned JSON</a>'
         st.markdown(href, unsafe_allow_html=True)
 
 # --- STATISTIKK OG DIAGRAMMER ---
@@ -260,13 +260,13 @@ if st.session_state.departures:
         
         For å fikse dette:
         1. Opprett en fil kalt `requirements.txt`
-        2. Legg til disse linjene:
+        2. Legg til:
            ```
            streamlit
            pandas
            plotly
            ```
-        3. Last opp begge filene til prosjektet ditt.
+        3. Last opp begge filene.
         """)
 
 else:
