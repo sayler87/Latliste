@@ -25,7 +25,7 @@ def load_data():
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 # Sikre at alle poster har ID
-                for item in   # <-- 'data' er lagt til nedenfor
+                for item in data:  # <-- NÅ RIKTIG
                     if "id" not in item:
                         item["id"] = int(datetime.now().timestamp())
                 return data
@@ -130,13 +130,13 @@ if st.sidebar.button("✅ Registrer Avgang" if not editing else "🔁 Oppdater A
             st.success(f"✅ Avgang {unit_number} registrert!")
 
         save_data(st.session_state.departures)
-        st.rerun()  # ✅ Riktig i ny Streamlit
+        st.rerun()  # Bruk st.rerun() i nyere Streamlit
 
 # Avbryt redigering
 if st.session_state.editing_id is not None:
     if st.sidebar.button("❌ Avbryt redigering"):
         st.session_state.editing_id = None
-        st.rerun()  # ✅ Riktig i ny Streamlit
+        st.rerun()
 
 st.sidebar.markdown("---")
 
@@ -196,7 +196,7 @@ with col1:
                 st.session_state.departures = []
                 save_data(st.session_state.departures)
                 st.success("✅ Alle avganger slettet!")
-                st.rerun()  # ✅ Riktig i ny Streamlit
+                st.rerun()
         else:
             st.warning("Ingen avganger å slette.")
 
