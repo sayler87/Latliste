@@ -3,12 +3,30 @@ import pandas as pd
 import json
 import os
 from datetime import datetime
-import base64
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # Fil for lagring
 DATA_FILE = "departures.json"
 
-# Ikon-ordbok
+# --- Hjelpefunksjoner ---
+def load_data():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            # Sikre at alle poster har 'id' hvis ikke tilføy
+            for d in data:
+                if 'id' not in d:
+                    d['id'] = d.get('unitNumber', '') + str(hash(d.get('unitNumber', '')))
+            return data
+    return []
+
+def save_data(data):
+    with open(DATA_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+# Type-ikoner
 TYPE_ICONS = {
     "Tog": "🚂",
     "Bil": "🚗",
@@ -16,259 +34,221 @@ TYPE_ICONS = {
     "Modul": "📦"
 }
 
-DESTINATIONS = ["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"]
+STATUS_COLORS = {
+    "Levert": "color: #27ae60; font-weight: bold;",
+    "I lager": "color: #3498db; font-weight: bold;",
+    "Underlasting": "color: #f39c12; font-weight: bold;"
+}
 
-# --- LAST DATA ---
-def load_data():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                # Sikre at alle poster har ID
-                for item in   # <-- NÅ RIKTIG
-                    if "id" not in item:
-                        item["id"] = int(datetime.now().timestamp())
-                return data
-        except Exception as e:
-            st.warning(f"Feil ved lasting: {e}")
-            return []
-    return []
+TYPE_COLORS = {
+    "Tog": "#e74c3c",
+    "Bil": "#f39c12",
+    "Tralle": "#3498db",
+    "Modul": "#9b59b6"
+}
 
-# --- LAGRE DATA ---
-def save_data(data):
-    try:
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        st.error(f"Lagring feilet: {e}")
+# --- CSS for utskrift og stil ---
+st.markdown("""
+<style>
+    .stApp { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .main .block-container { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+    h1, h2, h3 { color: #2c3e50 !important; }
+    .stButton button { border-radius: 8px; font-weight: 600; }
+    .stTextInput input, .stSelectbox select, .stTextArea textarea, .stTimeInput input {
+        border: 2px solid #e0e6ed; border-radius: 8px; padding: 10px; }
+    .stTextInput input:focus, .stSelectbox select:focus, .stTextArea textarea:focus {
+        border-color: #3498db; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
 
-# --- SESSION STATE ---
+    /* Utskriftsstil */
+    @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .stApp { background: white !important; }
+        .main .block-container, .element-container { background: white !important; color: black !important; }
+        [data-testid="stSidebar"] { display: none !important; }
+        .element-container:has(.print-hide) { display: none !important; }
+        .print-footer { text-align: center; font-size: 12px; color: #555; margin-top: 30px; padding-top: 10px; border-top: 1px solid #ccc; }
+        table { font-size: 12pt; border: 1px solid #000; }
+        th, td { padding: 8px; border-bottom: 1px solid #ccc; }
+        th { background-color: #f0f0f0 !important; color: #000 !important; }
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- Tittel ---
+st.markdown("<h1 style='text-align: center;'>🚛 Transportsystem</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; opacity: 0.8;'>Registrering og oversikt over alle avganger</p>", unsafe_allow_html=True)
+
+# --- Last inn data ---
 if 'departures' not in st.session_state:
     st.session_state.departures = load_data()
 
-if 'editing_id' not in st.session_state:
-    st.session_state.editing_id = None
+departures = st.session_state.departures
 
-# --- TITTEL ---
-st.markdown("<h1 style='text-align: center;'>🚛 Transportsystem</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #666;'>Registrering og oversikt over avganger</p>", unsafe_allow_html=True)
-st.markdown("---")
+# --- Sidebar: Registrer ny avgang ---
+with st.sidebar:
+    st.title("🚛 Registrer Avgang")
+    with st.form("departure_form"):
+        unit_number = st.text_input("Enhetsnummer *", placeholder="F.eks. TOG001").upper()
+        destination = st.selectbox("Destinasjon *", ["", "TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"])
+        time = st.time_input("Avgangstid *", value="now")
+        gate = st.text_input("Luke *", placeholder="F.eks. A1, B2")
+        type_ = st.selectbox("Type *", ["", "Tog", "Bil", "Tralle", "Modul"])
+        status = st.selectbox("Status *", ["", "Levert", "I lager", "Underlasting"])
+        comment = st.text_area("Kommentar", placeholder="F.eks. Forsinket, laster nå...")
 
-# === SIDEBAR: SKJEMA ===
-st.sidebar.header("🚛 Registrer / Oppdater Avgang")
+        submitted = st.form_submit_button("✅ Registrer Avgang")
+        editing = st.session_state.get("editing", False)
 
-# Hent redigeringsdata
-editing = None
-if st.session_state.editing_id is not None:
-    editing = next((d for d in st.session_state.departures if d["id"] == st.session_state.editing_id), None)
-
-# Skjema-felter
-unit_number = st.sidebar.text_input(
-    "Enhetsnummer *",
-    value=editing["unitNumber"].upper() if editing else "",
-    placeholder="F.eks. TOG001"
-).upper()
-
-destination = st.sidebar.selectbox(
-    "Destinasjon *",
-    DESTINATIONS,
-    index=DESTINATIONS.index(editing["destination"]) if editing and editing["destination"] in DESTINATIONS else 0
-)
-
-time = st.sidebar.text_input(
-    "Avgangstid *",
-    value=editing["time"] if editing else datetime.now().strftime("%H:%M")
-)
-
-gate = st.sidebar.text_input(
-    "Luke *",
-    value=editing["gate"] if editing else "",
-    placeholder="F.eks. A1, B2"
-)
-
-type_ = st.sidebar.selectbox(
-    "Type *",
-    ["Tog", "Bil", "Tralle", "Modul"],
-    index=["Tog", "Bil", "Tralle", "Modul"].index(editing["type"]) if editing else 0
-)
-
-status = st.sidebar.selectbox(
-    "Status *",
-    ["Levert", "I lager", "Underlasting"],
-    index=["Levert", "I lager", "Underlasting"].index(editing["status"]) if editing else 0
-)
-
-comment = st.sidebar.text_area(
-    "Kommentar",
-    value=editing["comment"] if editing and editing["comment"] else ""
-)
-
-# Knapp: Registrer / Oppdater
-if st.sidebar.button("✅ Registrer Avgang" if not editing else "🔁 Oppdater Avgang"):
-    if not all([unit_number, destination, time, gate, type_, status]):
-        st.sidebar.error("Vennligst fyll ut alle obligatoriske felt.")
-    elif not editing and any(d["unitNumber"] == unit_number for d in st.session_state.departures):
-        st.sidebar.error(f"Enhetsnummer {unit_number} eksisterer allerede!")
-    else:
-        new_entry = {
-            "id": editing["id"] if editing else int(datetime.now().timestamp()),
-            "unitNumber": unit_number,
-            "destination": destination,
-            "time": time,
-            "gate": gate,
-            "type": type_,
-            "status": status,
-            "comment": comment if comment else None
-        }
-
-        if editing:
-            idx = next(i for i, d in enumerate(st.session_state.departures) if d["id"] == editing["id"])
-            st.session_state.departures[idx] = new_entry
-            st.success(f"✅ Avgang {unit_number} oppdatert!")
-            st.session_state.editing_id = None
+    if submitted:
+        if not all([unit_number, destination, gate, type_, status]):
+            st.error("Vennligst fyll ut alle obligatoriske felt.")
+        elif any(d['unitNumber'] == unit_number and not editing for d in departures):
+            st.error(f"Enhetsnummer {unit_number} eksisterer allerede!")
         else:
-            st.session_state.departures.append(new_entry)
-            st.success(f"✅ Avgang {unit_number} registrert!")
+            if editing:
+                idx = st.session_state.edit_index
+                departures[idx] = {
+                    "id": departures[idx]["id"],
+                    "unitNumber": unit_number,
+                    "destination": destination,
+                    "time": time.strftime("%H:%M"),
+                    "gate": gate,
+                    "type": type_,
+                    "status": status,
+                    "comment": comment or None
+                }
+                st.success("Avgang oppdatert!")
+                st.session_state.editing = False
+            else:
+                new_id = str(datetime.now().timestamp())
+                departures.append({
+                    "id": new_id,
+                    "unitNumber": unit_number,
+                    "destination": destination,
+                    "time": time.strftime("%H:%M"),
+                    "gate": gate,
+                    "type": type_,
+                    "status": status,
+                    "comment": comment or None
+                })
+                st.success("Avgang registrert!")
+            st.session_state.departures = departures
+            save_data(departures)
+            st.rerun()
 
-        save_data(st.session_state.departures)
-        st.rerun()
-
-# Avbryt redigering
-if st.session_state.editing_id is not None:
-    if st.sidebar.button("❌ Avbryt redigering"):
-        st.session_state.editing_id = None
-        st.rerun()
-
-st.sidebar.markdown("---")
-
-# === HOVEDINNHOLD: OVERSIKT ===
-st.header("📋 Oversikt over Avganger")
-
-# Søk og filtrering
-col1, col2 = st.columns([3, 1])
+# --- Hovedinnhold ---
+# 🔍 Søk og filter
+st.subheader("📋 Oversikt over Avganger")
+col1, col2 = st.columns([3, 2])
 with col1:
-    search_term = st.text_input("Søk på enhetsnummer eller destinasjon", "")
+    search_term = st.text_input("Søk på enhetsnummer eller destinasjon")
 with col2:
-    selected_dest = st.selectbox("Destinasjon", ["Alle destinasjoner"] + DESTINATIONS)
+    filter_dest = st.selectbox("Filter på destinasjon", ["Alle destinasjoner"] + sorted(set(d['destination'] for d in departures)))
 
-# Filtrer
-filtered = st.session_state.departures
+# Filtrering
+filtered = departures.copy()
 if search_term:
-    filtered = [d for d in filtered if search_term.lower() in d["unitNumber"].lower() or search_term.lower() in d["destination"].lower()]
-if selected_dest != "Alle destinasjoner":
-    filtered = [d for d in filtered if d["destination"] == selected_dest]
+    filtered = [d for d in filtered if search_term.lower() in d['unitNumber'].lower() or search_term.lower() in d['destination'].lower()]
+if filter_dest != "Alle destinasjoner":
+    filtered = [d for d in filtered if d['destination'] == filter_dest]
 
-# Vis tabell med handlinger
-if filtered:
-    for idx, d in enumerate(filtered):
-        cols = st.columns([2, 2, 2, 1, 1, 1, 1, 2])
-        cols[0].write(d["unitNumber"])
-        cols[1].write(d["destination"])
-        cols[2].write(d["time"])
-        cols[3].write(d["gate"])
-        cols[4].markdown(
-            f'<span style="color:{{"Tog": "red", "Bil": "orange", "Tralle": "blue", "Modul": "purple"}}.get("{d["type"]}", "black")}; font-weight:bold;">'
-            f'{TYPE_ICONS.get(d["type"], "")} {d["type"]}</span>',
-            unsafe_allow_html=True
-        )
-        cols[5].markdown(
-            f'<span style="color:{{"Levert": "green", "I lager": "blue", "Underlasting": "orange"}}.get("{d["status"]}", "black")}; font-weight:bold;">'
-            f'{d["status"]}</span>',
-            unsafe_allow_html=True
-        )
-        cols[6].write(d["comment"] or "*Ingen*")
+# Konverter til DataFrame for lett håndtering
+df = pd.DataFrame(filtered) if filtered else pd.DataFrame(columns=["id", "unitNumber", "destination", "time", "gate", "type", "status", "comment"])
 
-        with cols[7]:
-            if st.button(f"✏️", key=f"edit_{d['id']}", help="Rediger"):
-                st.session_state.editing_id = d["id"]
+if not df.empty:
+    df['type_icon'] = df['type'].map(lambda t: f"{TYPE_ICONS.get(t, '📦')} {t}")
+    df['status_styled'] = df['status'].map(lambda s: f"<span style='{STATUS_COLORS.get(s, '')}'>{s}</span>")
+    df['type_styled'] = df['type'].map(lambda t: f"<span style='color:{TYPE_COLORS.get(t, '#333')}; font-weight:bold;'>{t}</span>")
+
+# Vis tabell
+if not df.empty:
+    # Bare vis kolonner vi vil ha
+    display_df = df[["unitNumber", "destination", "time", "gate", "type_icon", "status_styled", "comment"]].copy()
+    display_df.columns = ["Enhetsnummer", "Destinasjon", "Tid", "Luke", "Type", "Status", "Kommentar"]
+    display_df = display_df.fillna("<em>Ingen</em>")
+
+    st.write(display_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+    # Handlinger (rediger/slett)
+    st.write("### Handlinger")
+    action_col1, action_col2 = st.columns(len(df))
+    for idx, row in df.iterrows():
+        with action_col1:
+            if st.button(f"✏️ Rediger {row['unitNumber']}", key=f"edit_{row['id']}"):
+                st.session_state.editing = True
+                st.session_state.edit_index = next(i for i, d in enumerate(departures) if d['id'] == row['id'])
                 st.rerun()
-
-            if st.button(f"🗑️", key=f"del_{d['id']}", help="Slett"):
-                st.session_state.departures = [x for x in st.session_state.departures if x["id"] != d["id"]]
+        with action_col2:
+            if st.button(f"🗑️ Slett {row['unitNumber']}", key=f"del_{row['id']}"):
+                st.session_state.departures = [d for d in departures if d['id'] != row['id']]
                 save_data(st.session_state.departures)
-                st.success(f"✅ Avgang {d['unitNumber']} slettet!")
+                st.success(f"Slettet {row['unitNumber']}")
                 st.rerun()
 else:
-    st.info("Ingen avganger funnet.")
+    st.info("Ingen avganger registrert.")
 
-# === SYSTEMHANDLINGER ===
-st.markdown("---")
-st.header("⚙️ Systemhandlinger")
+# --- Statistikk og diagrammer ---
+st.subheader("📊 Statistikk og Diagrammer")
+
+if departures:
+    # Statistikk-kort
+    total = len(departures)
+    counts = {t: sum(1 for d in departures if d['type'] == t) for t in TYPE_ICONS.keys()}
+    statuses = {s: sum(1 for d in departures if d['status'] == s) for s in ["Levert", "I lager", "Underlasting"]}
+    destinations = {d: sum(1 for a in departures if a['destination'] == d) for d in set(d['destination'] for d in departures)}
+
+    cols = st.columns(3)
+    cols[0].metric("Totalt", total)
+    cols[1].metric("Levert", statuses["Levert"], delta_color="inverse")
+    cols[2].metric("I lager", statuses["I lager"])
+
+    # Diagrammer
+    col1, col2 = st.columns(2)
+
+    with col1:
+        fig_pie = px.pie(
+            names=[f"{TYPE_ICONS[t]} {t}" for t in counts.keys()],
+            values=list(counts.values()),
+            title="Avganger per Type",
+            color_discrete_sequence=list(TYPE_COLORS.values())
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    with col2:
+        dest_data = pd.DataFrame(list(destinations.items()), columns=["Destinasjon", "Antall"])
+        fig_bar = px.bar(dest_data, x="Destinasjon", y="Antall", title="Avganger per Destinasjon", color_discrete_sequence=["#3498db"])
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+# --- Systemhandlinger ---
+st.subheader("⚙️ Systemhandlinger")
 
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     if st.button("🗑️ Tøm alle avganger"):
-        if st.session_state.departures:
-            if st.checkbox("✅ Bekreft: Slett ALT", key="confirm_clear_all"):
+        if departures:
+            if st.button("Bekreft sletting av ALT?"):
                 st.session_state.departures = []
-                save_data(st.session_state.departures)
-                st.success("✅ Alt er tømt!")
+                save_data([])
+                st.success("Alle avganger slettet!")
                 st.rerun()
         else:
             st.warning("Ingen avganger å slette.")
 
 with col2:
     if st.button("🖨️ Skriv ut"):
-        st.info("Bruk Ctrl+P for å skrive ut siden (nettleserens utskrift).")
+        st.markdown("<script>window.print()</script>", unsafe_allow_html=True)
 
 with col3:
     if st.button("📄 Eksporter til CSV"):
-        df_export = pd.DataFrame(st.session_state.departures)
-        csv = df_export.to_csv(index=False, encoding='utf-8')
-        b64 = base64.b64encode(csv.encode()).decode()
-        href = f'<a href="text/csv;base64,{b64}" download="avganger.csv">⬇️ Last ned CSV</a>'
-        st.markdown(href, unsafe_allow_html=True)
+        export_df = pd.DataFrame(departures)[["unitNumber", "destination", "time", "gate", "type", "status", "comment"]]
+        csv = export_df.to_csv(index=False, encoding='utf-8-sig')
+        st.download_button("Last ned CSV", csv, f"avganger_{datetime.now().strftime('%Y-%m-%d')}.csv", "text/csv")
 
 with col4:
-    if st.button("💾 Last ned JSON"):
-        json_str = json.dumps(st.session_state.departures, ensure_ascii=False, indent=2)
-        b64 = base64.b64encode(json_str.encode()).decode()
-        href = f'<a href="application/json;base64,{b64}" download="backup.json">⬇️ Last ned JSON</a>'
-        st.markdown(href, unsafe_allow_html=True)
+    if st.button("💾 Last ned backup (JSON)"):
+        json_str = json.dumps(departures, indent=2, ensure_ascii=False)
+        st.download_button("Last ned JSON", json_str, f"backup_{datetime.now().strftime('%Y-%m-%d')}.json", "application/json")
 
-# === STATISTIKK ===
-st.markdown("---")
-st.header("📊 Statistikk og Diagrammer")
-
-if st.session_state.departures:
-    df_full = pd.DataFrame(st.session_state.departures)
-
-    try:
-        import plotly.express as px
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.subheader("Per Type")
-            type_counts = df_full["type"].value_counts().reset_index()
-            type_counts.columns = ["type", "count"]
-            type_counts["label"] = type_counts["type"].map(lambda t: f"{TYPE_ICONS.get(t, '')} {t}")
-            fig1 = px.pie(type_counts, values="count", names="label", color_discrete_sequence=px.colors.qualitative.Pastel)
-            st.plotly_chart(fig1, use_container_width=True)
-
-        with col2:
-            st.subheader("Per Destinasjon")
-            dest_counts = df_full["destination"].value_counts().reset_index()
-            dest_counts.columns = ["destination", "count"]
-            fig2 = px.bar(dest_counts, x="destination", y="count", color="count", color_continuous_scale="Blues")
-            st.plotly_chart(fig2, use_container_width=True)
-
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Totalt", len(df_full))
-        c2.metric("Levert", int((df_full["status"] == "Levert").sum()))
-        c3.metric("I lager", int((df_full["status"] == "I lager").sum()))
-
-    except ImportError:
-        st.warning("Installer `plotly` for diagrammer: legg til i `requirements.txt`")
-
-else:
-    st.info("Ingen data tilgjengelig for statistikk.")
-
-# === FOOTER ===
-st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown(
-    f"<p style='text-align: center; color: #888; font-size: 0.9em;'>"
-    f"Utskriftsdato: {datetime.now().strftime('%d.%m.%Y kl. %H:%M')}</p>",
-    unsafe_allow_html=True
-)
+# --- Utskriftsfot ---
+st.markdown(f"<div class='print-footer'>Utskriftsdato: {datetime.now().strftime('%d.%m.%Y kl. %H:%M')}</div>", unsafe_allow_html=True)
