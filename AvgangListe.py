@@ -3,7 +3,7 @@ import pandas as pd
 import json
 import os
 from datetime import datetime
-import matplotlib.pyplot as plt
+import plotly.express as px
 import base64
 
 # Fil for lagring
@@ -30,14 +30,18 @@ def load_data():
                     if "id" not in item:
                         item["id"] = int(datetime.now().timestamp())
                 return data
-            except:
+            except Exception as e:
+                st.warning(f"Kunne ikke lese data: {e}")
                 return []
     return []
 
 # Lagre data
 def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        st.error(f"Lagring feilet: {e}")
 
 # Initialiser session state
 if 'departures' not in st.session_state:
@@ -51,7 +55,7 @@ st.markdown("<h1 style='text-align: center;'>🚛 Transportsystem</h1>", unsafe_
 st.markdown("<p style='text-align: center; color: #666;'>Registrering og oversikt over avganger</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# --- SKJEMA ---
+# --- SKJEMA I SIDEBAR ---
 st.sidebar.header("🚛 Registrer Avgang")
 
 # Hent redigeringsdata hvis eksisterer
@@ -127,6 +131,7 @@ if st.sidebar.button("✅ Registrer Avgang" if not editing else "🔁 Oppdater A
             st.success(f"✅ Avgang {unit_number} registrert!")
 
         save_data(st.session_state.departures)
+        st.experimental_rerun()  # Oppdater visning
 
 # Knapp for å avbryte redigering
 if st.session_state.editing_id is not None:
@@ -149,31 +154,32 @@ if search_term:
 if selected_dest != "Alle destinasjoner":
     filtered = [d for d in filtered if d["destination"] == selected_dest]
 
-# Konverter til DataFrame for enklere håndtering
-df = pd.DataFrame(filtered) if filtered else pd.DataFrame(columns=["unitNumber", "destination", "time", "gate", "type", "status", "comment", "id"])
-df = df[["unitNumber", "destination", "time", "gate", "type", "status", "comment"]]
+# Konverter til DataFrame
+if filtered:
+    df = pd.DataFrame(filtered)
+    df = df[["unitNumber", "destination", "time", "gate", "type", "status", "comment"]]
+else:
+    df = pd.DataFrame(columns=["unitNumber", "destination", "time", "gate", "type", "status", "comment"])
 
-# Vis tabell
+# Vis tabell med farger og ikoner
 if not df.empty:
-    # Legg til ikoner og farger
     def format_row(row):
         icon = TYPE_ICONS.get(row["type"], "")
-        type_color = {"Tog": "color:red;", "Bil": "color:orange;", "Tralle": "color:blue;", "Modul": "color:purple;"}.get(row["type"], "")
-        status_color = {"Levert": "color:green;", "I lager": "color:blue;", "Underlasting": "color:orange;"}.get(row["status"], "")
+        type_color = {"Tog": "red", "Bil": "orange", "Tralle": "blue", "Modul": "purple"}.get(row["type"], "black")
+        status_color = {"Levert": "green", "I lager": "blue", "Underlasting": "orange"}.get(row["status"], "black")
         comment = row["comment"] or "<em>Ingen</em>"
         return pd.Series([
             row["unitNumber"],
             row["destination"],
             row["time"],
             row["gate"],
-            f'<span style="{type_color} font-weight:bold;">{icon} {row["type"]}</span>',
-            f'<span style="{status_color} font-weight:bold;">{row["status"]}</span>',
+            f'<span style="color:{type_color}; font-weight:bold;">{icon} {row["type"]}</span>',
+            f'<span style="color:{status_color}; font-weight:bold;">{row["status"]}</span>',
             comment
         ])
 
     styled_df = df.apply(format_row, axis=1)
     styled_df.columns = ["Enhetsnummer", "Destinasjon", "Tid", "Luke", "Type", "Status", "Kommentar"]
-
     st.markdown(styled_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 else:
     st.info("Ingen avganger funnet.")
@@ -187,10 +193,10 @@ col1, col2, col3, col4 = st.columns(4)
 with col1:
     if st.button("🗑️ Tøm alle avganger"):
         if st.session_state.departures:
-            if st.checkbox("Bekreft sletting av alle data", key="confirm_clear"):
+            if st.checkbox("✅ Bekreft: Slett ALLE avganger", key="confirm_clear"):
                 st.session_state.departures = []
                 save_data(st.session_state.departures)
-                st.success("✅ Alle avganger slettet!")
+                st.success("✅ Alle avganger er slettet!")
                 st.experimental_rerun()
         else:
             st.warning("Ingen avganger å slette.")
@@ -201,16 +207,17 @@ with col2:
 
 with col3:
     if st.button("📄 Eksporter til CSV"):
-        csv = pd.DataFrame(st.session_state.departures).to_csv(index=False)
+        export_df = pd.DataFrame(st.session_state.departures)
+        csv = export_df.to_csv(index=False, encoding='utf-8')
         b64 = base64.b64encode(csv.encode()).decode()
-        href = f'<a href="data:file/csv;base64,{b64}" download="avganger.csv">Last ned CSV</a>'
+        href = f'<a href="data:text/csv;base64,{b64}" download="avganger.csv">⬇️ Last ned CSV</a>'
         st.markdown(href, unsafe_allow_html=True)
 
 with col4:
     if st.button("💾 Last ned backup (JSON)"):
         json_str = json.dumps(st.session_state.departures, ensure_ascii=False, indent=2)
         b64 = base64.b64encode(json_str.encode()).decode()
-        href = f'<a href="data:application/json;base64,{b64}" download="backup.json">Last ned JSON</a>'
+        href = f'<a href="data:application/json;base64,{b64}" download="backup_avgang.json">⬇️ Last ned JSON</a>'
         st.markdown(href, unsafe_allow_html=True)
 
 # --- STATISTIKK OG DIAGRAMMER ---
@@ -226,10 +233,9 @@ if st.session_state.departures:
         st.subheader("Avganger per Type")
         type_counts = df_full["type"].value_counts().reset_index()
         type_counts.columns = ["type", "count"]
-        type_counts["icon"] = type_counts["type"].map(TYPE_ICONS)
-        type_counts["label"] = type_counts["icon"] + " " + type_counts["type"]
+        type_counts["label"] = type_counts["type"].map(lambda t: f"{TYPE_ICONS.get(t, '')} {t}")
 
-        fig1 = px.pie(type_counts, values="count", names="label", title="Per Type")
+        fig1 = px.pie(type_counts, values="count", names="label", title="Fordeling etter type", color_discrete_sequence=px.colors.qualitative.Set2)
         st.plotly_chart(fig1, use_container_width=True)
 
     with col2:
@@ -237,26 +243,24 @@ if st.session_state.departures:
         dest_counts = df_full["destination"].value_counts().reset_index()
         dest_counts.columns = ["destination", "count"]
 
-        fig2 = px.bar(dest_counts, x="destination", y="count", title="Per Destinasjon", color="count", color_continuous_scale="Blues")
+        fig2 = px.bar(dest_counts, x="destination", y="count", title="Fordeling etter destinasjon",
+                      color="count", color_continuous_scale="Blues")
         st.plotly_chart(fig2, use_container_width=True)
 
-    # Statistikk-kort
-    st.subheader("Statistikk")
+    # Kortstatistikk
+    st.subheader("Nøkkeltall")
     col1, col2, col3 = st.columns(3)
     col1.metric("Totalt", len(df_full))
-    col2.metric("Levert", len(df_full[df_full["status"] == "Levert"]))
-    col3.metric("I lager", len(df_full[df_full["status"] == "I lager"]))
-
-    # Tabell med antall per type
-    st.write("**Fordeling:**")
-    st.dataframe(df_full.groupby("type").size().reset_index(name="Antall"))
+    col2.metric("Levert", int((df_full["status"] == "Levert").sum()))
+    col3.metric("I lager", int((df_full["status"] == "I lager").sum()))
 
 else:
     st.info("Ingen data tilgjengelig for statistikk.")
 
-# --- REDIGERING VIA KNAPPER I TABELL? ---
-# (Vi kan legge til en kolonne med "Rediger"-knapp hvis ønskelig – fortell meg!)
-
-# Footer
+# --- Footer ---
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align: center; color: #888; font-size: 0.9em;'>Utskriftsdato: {datetime.now().strftime('%d.%m.%Y %H:%M')}</p>", unsafe_allow_html=True)
+st.markdown(
+    f"<p style='text-align: center; color: #888; font-size: 0.9em;'>"
+    f"Utskriftsdato: {datetime.now().strftime('%d.%m.%Y kl. %H:%M')}</p>",
+    unsafe_allow_html=True
+)
