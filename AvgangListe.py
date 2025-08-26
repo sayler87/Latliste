@@ -18,7 +18,7 @@ TYPE_ICONS = {
 
 DESTINATIONS = ["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"]
 
-# Last data
+# --- LAST DATA ---
 def load_data():
     if os.path.exists(DATA_FILE):
         try:
@@ -34,7 +34,7 @@ def load_data():
             return []
     return []
 
-# Lagre data
+# --- LAGRE DATA ---
 def save_data(data):
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -42,14 +42,14 @@ def save_data(data):
     except Exception as e:
         st.error(f"Lagring feilet: {e}")
 
-# Initialiser session state
+# --- SESSION STATE ---
 if 'departures' not in st.session_state:
     st.session_state.departures = load_data()
 
 if 'editing_id' not in st.session_state:
     st.session_state.editing_id = None
 
-# Tittel
+# --- TITTEL ---
 st.markdown("<h1 style='text-align: center;'>🚛 Transportsystem</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #666;'>Registrering og oversikt over avganger</p>", unsafe_allow_html=True)
 st.markdown("---")
