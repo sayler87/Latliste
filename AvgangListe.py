@@ -18,13 +18,14 @@ TYPE_ICONS = {
 
 DESTINATIONS = ["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"]
 
-# --- LAST DATA ---
+# Last data
 def load_data():
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                for item in   # Sikrer ID
+                # Sikre at alle poster har ID
+                for item in   # <-- NÅ RIKTIG
                     if "id" not in item:
                         item["id"] = int(datetime.now().timestamp())
                 return data
@@ -33,7 +34,7 @@ def load_data():
             return []
     return []
 
-# --- LAGRE DATA ---
+# Lagre data
 def save_data(data):
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -41,14 +42,14 @@ def save_data(data):
     except Exception as e:
         st.error(f"Lagring feilet: {e}")
 
-# --- SESSION STATE ---
+# Initialiser session state
 if 'departures' not in st.session_state:
     st.session_state.departures = load_data()
 
 if 'editing_id' not in st.session_state:
     st.session_state.editing_id = None
 
-# --- TITTEL ---
+# Tittel
 st.markdown("<h1 style='text-align: center;'>🚛 Transportsystem</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #666;'>Registrering og oversikt over avganger</p>", unsafe_allow_html=True)
 st.markdown("---")
@@ -159,39 +160,6 @@ if selected_dest != "Alle destinasjoner":
 
 # Vis tabell med handlinger
 if filtered:
-    df = pd.DataFrame(filtered)
-    df = df[["id", "unitNumber", "destination", "time", "gate", "type", "status", "comment"]]
-
-    # Legg til kolonner for visning
-    def format_row(row):
-        icon = TYPE_ICONS.get(row["type"], "")
-        t_color = {"Tog": "red", "Bil": "orange", "Tralle": "blue", "Modul": "purple"}.get(row["type"], "black")
-        s_color = {"Levert": "green", "I lager": "blue", "Underlasting": "orange"}.get(row["status"], "black")
-        comment = row["comment"] or "<em>Ingen</em>"
-        return pd.Series([
-            row["unitNumber"],
-            row["destination"],
-            row["time"],
-            row["gate"],
-            f'<span style="color:{t_color}; font-weight:bold;">{icon} {row["type"]}</span>',
-            f'<span style="color:{s_color}; font-weight:bold;">{row["status"]}</span>',
-            comment,
-            f"""
-            <div style="display: flex; gap: 5px;">
-                <button onclick="window.location.reload()" style="padding:5px 10px; font-size:12px;">✏️ Rediger</button>
-                <button onclick="window.location.reload()" style="padding:5px 10px; font-size:12px;">🗑️ Slett</button>
-            </div>
-            """
-        ])
-
-    # Men: Streamlit tillater IKKE onclick i HTML
-    # Derfor bruker vi st.form + st.button i en løkke
-    st.markdown("""
-    <style>
-    .action-btn { padding: 5px 10px; font-size: 12px; margin: 2px; }
-    </style>
-    """, unsafe_allow_html=True)
-
     for idx, d in enumerate(filtered):
         cols = st.columns([2, 2, 2, 1, 1, 1, 1, 2])
         cols[0].write(d["unitNumber"])
@@ -211,18 +179,15 @@ if filtered:
         cols[6].write(d["comment"] or "*Ingen*")
 
         with cols[7]:
-            # REDIGER KNAPP
             if st.button(f"✏️", key=f"edit_{d['id']}", help="Rediger"):
                 st.session_state.editing_id = d["id"]
                 st.rerun()
 
-            # SLETT KNAPP
             if st.button(f"🗑️", key=f"del_{d['id']}", help="Slett"):
                 st.session_state.departures = [x for x in st.session_state.departures if x["id"] != d["id"]]
                 save_data(st.session_state.departures)
                 st.success(f"✅ Avgang {d['unitNumber']} slettet!")
                 st.rerun()
-
 else:
     st.info("Ingen avganger funnet.")
 
@@ -252,14 +217,14 @@ with col3:
         df_export = pd.DataFrame(st.session_state.departures)
         csv = df_export.to_csv(index=False, encoding='utf-8')
         b64 = base64.b64encode(csv.encode()).decode()
-        href = f'<a href="data:text/csv;base64,{b64}" download="avganger.csv">⬇️ Last ned CSV</a>'
+        href = f'<a href="text/csv;base64,{b64}" download="avganger.csv">⬇️ Last ned CSV</a>'
         st.markdown(href, unsafe_allow_html=True)
 
 with col4:
     if st.button("💾 Last ned JSON"):
         json_str = json.dumps(st.session_state.departures, ensure_ascii=False, indent=2)
         b64 = base64.b64encode(json_str.encode()).decode()
-        href = f'<a href="data:application/json;base64,{b64}" download="backup.json">⬇️ Last ned JSON</a>'
+        href = f'<a href="application/json;base64,{b64}" download="backup.json">⬇️ Last ned JSON</a>'
         st.markdown(href, unsafe_allow_html=True)
 
 # === STATISTIKK ===
