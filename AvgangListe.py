@@ -24,6 +24,7 @@ def load_data():
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
+                # Sikre at alle poster har ID
                 for item in 
                     if "id" not in item:
                         item["id"] = int(datetime.now().timestamp())
@@ -56,6 +57,7 @@ st.markdown("---")
 # --- SKJEMA I SIDEBAR ---
 st.sidebar.header("🚛 Registrer Avgang")
 
+# Hent redigeringsdata hvis eksisterer
 editing = None
 if st.session_state.editing_id is not None:
     editing = next((d for d in st.session_state.departures if d["id"] == st.session_state.editing_id), None)
@@ -130,7 +132,7 @@ if st.sidebar.button("✅ Registrer Avgang" if not editing else "🔁 Oppdater A
         save_data(st.session_state.departures)
         st.experimental_rerun()
 
-# Avbryt redigering
+# Knapp for å avbryt redigering
 if st.session_state.editing_id is not None:
     if st.sidebar.button("❌ Avbryt redigering"):
         st.session_state.editing_id = None
@@ -144,19 +146,21 @@ st.header("📋 Oversikt over Avganger")
 search_term = st.text_input("Søk på enhetsnummer eller destinasjon...")
 selected_dest = st.selectbox("Filtrer på destinasjon", ["Alle destinasjoner"] + DESTINATIONS)
 
+# Filtrer data
 filtered = [d for d in st.session_state.departures]
 if search_term:
     filtered = [d for d in filtered if search_term.lower() in d["unitNumber"].lower() or search_term.lower() in d["destination"].lower()]
 if selected_dest != "Alle destinasjoner":
     filtered = [d for d in filtered if d["destination"] == selected_dest]
 
-# Vis tabell
+# Konverter til DataFrame
 if filtered:
     df = pd.DataFrame(filtered)
     df = df[["unitNumber", "destination", "time", "gate", "type", "status", "comment"]]
 else:
     df = pd.DataFrame(columns=["unitNumber", "destination", "time", "gate", "type", "status", "comment"])
 
+# Vis tabell med ikoner og farger
 if not df.empty:
     def format_row(row):
         icon = TYPE_ICONS.get(row["type"], "")
@@ -173,9 +177,9 @@ if not df.empty:
             comment
         ])
 
-    styled = df.apply(format_row, axis=1)
-    styled.columns = ["Enhetsnummer", "Destinasjon", "Tid", "Luke", "Type", "Status", "Kommentar"]
-    st.markdown(styled.to_html(escape=False, index=False), unsafe_allow_html=True)
+    styled_df = df.apply(format_row, axis=1)
+    styled_df.columns = ["Enhetsnummer", "Destinasjon", "Tid", "Luke", "Type", "Status", "Kommentar"]
+    st.markdown(styled_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 else:
     st.info("Ingen avganger funnet.")
 
@@ -188,33 +192,34 @@ col1, col2, col3, col4 = st.columns(4)
 with col1:
     if st.button("🗑️ Tøm alle avganger"):
         if st.session_state.departures:
-            if st.checkbox("✅ Bekreft sletting av alle", key="clear_confirm"):
+            if st.checkbox("✅ Bekreft: Slett ALLE", key="confirm_clear"):
                 st.session_state.departures = []
                 save_data(st.session_state.departures)
-                st.success("✅ Alt tømt!")
+                st.success("✅ Alle avganger slettet!")
                 st.experimental_rerun()
         else:
-            st.warning("Ingen data å slette.")
+            st.warning("Ingen avganger å slette.")
 
 with col2:
     if st.button("🖨️ Skriv ut"):
-        st.info("Bruk Ctrl+P for å skrive ut.")
+        st.info("Bruk nettleserens utskrift (Ctrl+P).")
 
 with col3:
     if st.button("📄 Eksporter til CSV"):
-        csv = pd.DataFrame(st.session_state.departures).to_csv(index=False)
+        export_df = pd.DataFrame(st.session_state.departures)
+        csv = export_df.to_csv(index=False, encoding='utf-8')
         b64 = base64.b64encode(csv.encode()).decode()
         href = f'<a href="data:text/csv;base64,{b64}" download="avganger.csv">⬇️ Last ned CSV</a>'
         st.markdown(href, unsafe_allow_html=True)
 
 with col4:
     if st.button("💾 Last ned JSON"):
-        js = json.dumps(st.session_state.departures, ensure_ascii=False, indent=2)
-        b64 = base64.b64encode(js.encode()).decode()
+        json_str = json.dumps(st.session_state.departures, ensure_ascii=False, indent=2)
+        b64 = base64.b64encode(json_str.encode()).decode()
         href = f'<a href="data:application/json;base64,{b64}" download="backup.json">⬇️ Last ned JSON</a>'
         st.markdown(href, unsafe_allow_html=True)
 
-# --- DIAGRAMMER (med fallback) ---
+# --- STATISTIKK OG DIAGRAMMER ---
 st.markdown("---")
 st.header("📊 Statistikk og Diagrammer")
 
@@ -227,18 +232,20 @@ if st.session_state.departures:
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("Per Type")
-            type_count = df_full["type"].value_counts().reset_index()
-            type_count.columns = ["type", "count"]
-            type_count["label"] = type_count["type"].map(lambda t: f"{TYPE_ICONS.get(t, '')} {t}")
-            fig1 = px.pie(type_count, values="count", names="label", color_discrete_sequence=px.colors.qualitative.Pastel)
+            st.subheader("Avganger per Type")
+            type_counts = df_full["type"].value_counts().reset_index()
+            type_counts.columns = ["type", "count"]
+            type_counts["label"] = type_counts["type"].map(lambda t: f"{TYPE_ICONS.get(t, '')} {t}")
+            fig1 = px.pie(type_counts, values="count", names="label", title="Fordeling etter type",
+                          color_discrete_sequence=px.colors.qualitative.Pastel)
             st.plotly_chart(fig1, use_container_width=True)
 
         with col2:
-            st.subheader("Per Destinasjon")
-            dest_count = df_full["destination"].value_counts().reset_index()
-            dest_count.columns = ["destination", "count"]
-            fig2 = px.bar(dest_count, x="destination", y="count", color="count", color_continuous_scale="Blues")
+            st.subheader("Avganger per Destinasjon")
+            dest_counts = df_full["destination"].value_counts().reset_index()
+            dest_counts.columns = ["destination", "count"]
+            fig2 = px.bar(dest_counts, x="destination", y="count", title="Fordeling etter destinasjon",
+                          color="count", color_continuous_scale="Blues")
             st.plotly_chart(fig2, use_container_width=True)
 
         # Nøkkeltall
@@ -249,10 +256,11 @@ if st.session_state.departures:
 
     except ImportError:
         st.warning("""
-        **Diagramvise kræsj: `plotly` mangler.**  
+        ❌ **Kan ikke vise diagrammer: `plotly` er ikke installert.**  
+        
         For å fikse dette:
         1. Opprett en fil kalt `requirements.txt`
-        2. Legg til:  
+        2. Legg til disse linjene:
            ```
            streamlit
            pandas
