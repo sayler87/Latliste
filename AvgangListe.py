@@ -3,12 +3,9 @@ import pandas as pd
 import json
 from datetime import datetime
 import plotly.express as px
-import plotly.graph_objects as go
 from io import StringIO
 import time as time_module
-from PIL import Image
-import requests
-from io import BytesIO
+import re  # For validering av enhetsnummer
 
 # App konfigurasjon
 st.set_page_config(
@@ -108,6 +105,14 @@ st.markdown("""
         margin-right: 8px;
         vertical-align: middle;
     }
+    .copy-btn {
+        background: none;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+        color: #6366F1;
+        margin-left: 8px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -164,6 +169,11 @@ def save_data():
 
 def add_departure(unit_number, destination, time_str, gate, type_, status, comment):
     """Legg til en ny avgang"""
+    # Valider enhetsnummer: TOG1234, BIL5678, osv.
+    if not re.match(r"^(TOG|BIL|TRL|MOD)\d{4,6}$", unit_number):
+        show_toast("❌ Enhetsnummer må være f.eks. TOG1234 eller BIL5678", "error")
+        return
+
     new_id = datetime.now().timestamp()
     new_entry = {
         'id': new_id,
@@ -177,10 +187,14 @@ def add_departure(unit_number, destination, time_str, gate, type_, status, comme
     }
     st.session_state.departures.append(new_entry)
     save_data()
-    show_toast("Avgang registrert!", "success")
+    show_toast(f"✅ {unit_number} registrert!", "success")
 
 def update_departure(index, unit_number, destination, time_str, gate, type_, status, comment):
     """Oppdater en eksisterende avgang"""
+    if not re.match(r"^(TOG|BIL|TRL|MOD)\d{4,6}$", unit_number):
+        show_toast("❌ Enhetsnummer må være f.eks. TOG1234", "error")
+        return
+
     st.session_state.departures[index] = {
         'id': st.session_state.departures[index]['id'],
         'unitNumber': unit_number.upper(),
@@ -192,42 +206,43 @@ def update_departure(index, unit_number, destination, time_str, gate, type_, sta
         'comment': comment if comment else None
     }
     save_data()
-    show_toast("Avgang oppdatert!", "edit")
+    show_toast(f"✏️ {unit_number} oppdatert!", "edit")
     st.session_state.editing_index = None
     st.session_state.edit_data = None
 
 def delete_departure(index):
     """Slett en avgang"""
+    unit = st.session_state.departures[index]['unitNumber']
     del st.session_state.departures[index]
     save_data()
-    show_toast("Avgang slettet!", "delete")
+    show_toast(f"🗑️ {unit} slettet!", "delete")
 
 def clear_all_departures():
     """Slett alle avganger"""
+    count = len(st.session_state.departures)
     st.session_state.departures = []
     save_data()
-    show_toast("Alle avganger er slettet!", "delete")
+    show_toast(f"🗑️ Alle ({count}) avganger slettet!", "delete")
 
 def export_to_csv():
     """Eksporter data til CSV"""
     if not st.session_state.departures:
-        show_toast("Ingen data å eksportere", "info")
+        show_toast("❌ Ingen data å eksportere", "info")
         return None
     
     df = pd.DataFrame(st.session_state.departures)
-    # Fjern ID-kolonnen for eksport
     df_export = df.drop(columns=['id'], errors='ignore')
-    show_toast("Data eksportert til CSV!", "success")
+    show_toast("📊 Data eksportert til CSV!", "success")
     return df_export.to_csv(index=False, sep=';').encode('utf-8-sig')
 
 def backup_data():
     """Lag backup av data som JSON"""
     if not st.session_state.departures:
-        show_toast("Ingen data å sikre", "info")
+        show_toast("ℹ️ Ingen data å sikre", "info")
         return None
     
-    show_toast("Backup lastet ned!", "success")
-    return json.dumps(st.session_state.departures, indent=2)
+    show_toast("💾 Backup lastet ned!", "success")
+    return json.dumps(st.session_state.departures, indent=2, ensure_ascii=False)
 
 def load_backup(uploaded_file):
     """Last opp backup-fil"""
@@ -235,15 +250,28 @@ def load_backup(uploaded_file):
         data = json.load(uploaded_file)
         st.session_state.departures = data
         save_data()
-        show_toast("Backup lastet opp!", "success")
+        show_toast("✅ Backup lastet opp!", "success")
         st.session_state.file_uploaded = True
     except Exception as e:
-        show_toast(f"Feil ved lasting av backup: {e}", "error")
+        show_toast(f"❌ Feil ved lasting: {str(e)}", "error")
 
-# Håndter filopplasting utenfor callback
-if st.session_state.file_uploaded:
-    st.session_state.file_uploaded = False
-    st.rerun()
+def load_example_data():
+    """Last inn eksempeldata"""
+    example_data = [
+        {
+            'id': datetime.now().timestamp() - i,
+            'unitNumber': f'TOG100{i+1}',
+            'destination': 'TRONDHEIM',
+            'time': f'0{i+6}:30',
+            'gate': f'G{i+1}',
+            'type': 'Tog',
+            'status': 'Levert',
+            'comment': 'Eksempel'
+        } for i in range(3)
+    ]
+    st.session_state.departures.extend(example_data)
+    save_data()
+    show_toast("🧪 Eksempeldata lastet inn!", "success")
 
 # Vis toast melding hvis det finnes en
 if st.session_state.toast_message:
@@ -266,7 +294,6 @@ if st.session_state.toast_message:
     icon = toast_icons.get(st.session_state.toast_type, "📢")
     color = toast_colors.get(st.session_state.toast_type, "#333")
     
-    # HTML for toast
     toast_html = f"""
     <div class="toast show" style="background-color: {color};">
         {icon} {st.session_state.toast_message}
@@ -274,26 +301,37 @@ if st.session_state.toast_message:
     <script>
         setTimeout(function() {{
             var toast = document.querySelector('.toast');
-            if (toast) toast.classList.remove('show');
+            if (toast) {{
+                toast.classList.remove('show');
+            }}
         }}, 3000);
     </script>
     """
-    
     st.markdown(toast_html, unsafe_allow_html=True)
     
-    # Nullstill toast melding etter visning
-    if st.button("OK", key="toast_ok"):
-        st.session_state.toast_message = None
-        st.session_state.toast_type = None
-        st.rerun()
+    # Nullstill toast og oppdater
+    time_module.sleep(0.1)
+    st.session_state.toast_message = None
+    st.session_state.toast_type = None
+    st.rerun()
 
-# Sidebar for registrering av nye avganger
+# Sidebar for registrering
 with st.sidebar:
     st.markdown('<h1 style="color: #1E3A8A; text-align: center;">🚢 Registrer Avganger</h1>', unsafe_allow_html=True)
     
-    # Skjema for registrering med ikoner
+    # Rask søk etter enhet
+    quick_search = st.text_input("🔍 Sjekk enhet (TOG1234):")
+    if quick_search:
+        matches = [d for d in st.session_state.departures if quick_search.upper() in d['unitNumber']]
+        if matches:
+            for m in matches:
+                st.caption(f"✅ {m['unitNumber']} → {m['destination']} ({m['status']})")
+        else:
+            st.caption("❌ Ingen treff")
+
+    # Skjema for registrering
     with st.form("departure_form"):
-        unit_number = st.text_input("📋 Enhetsnummer:", key="unit_number", max_chars=20)
+        unit_number = st.text_input("📋 Enhetsnummer (f.eks. TOG1234):", key="unit_number", max_chars=20)
         
         destination = st.selectbox(
             "📍 Destinasjon:",
@@ -321,29 +359,29 @@ with st.sidebar:
         submitted = st.form_submit_button("📝 Registrer Avgang")
         
         if submitted:
-            if not all([unit_number, destination, gate, type_, status]):
-                show_toast("Vennligst fyll ut alle obligatoriske felter", "error")
+            if not unit_number.strip():
+                show_toast("⚠️ Vennligst fyll inn enhetsnummer", "error")
+            elif not destination:
+                show_toast("⚠️ Vennligst velg destinasjon", "error")
+            elif not gate.strip():
+                show_toast("⚠️ Vennligst fyll inn luke", "error")
+            elif not type_:
+                show_toast("⚠️ Vennligst velg type", "error")
+            elif not status:
+                show_toast("⚠️ Vennligst velg status", "error")
             else:
-                # Konverter til store bokstaver
-                unit_number = unit_number.upper()
-                
-                # Sjekk om enhetsnummer allerede finnes
-                existing_ids = [d['unitNumber'] for d in st.session_state.departures]
-                
-                if unit_number in existing_ids:
-                    show_toast(f"Enhetsnummer {unit_number} finnes allerede!", "info")
+                unit_number = unit_number.strip().upper()
+                existing = [d for d in st.session_state.departures if d['unitNumber'] == unit_number]
+                if existing:
+                    show_toast(f"ℹ️ {unit_number} eksisterer allerede!", "info")
                 else:
                     time_str = time_val.strftime("%H:%M")
-                    add_departure(
-                        unit_number,
-                        destination,
-                        time_str,
-                        gate,
-                        type_,
-                        status,
-                        comment
-                    )
-                    st.rerun()
+                    add_departure(unit_number, destination, time_str, gate, type_, status, comment)
+
+    # Demo-knapp
+    if st.button("🧪 Last inn eksempeldata"):
+        load_example_data()
+        st.rerun()
 
 # Hovedinnhold
 st.markdown('<div class="main-header">📋 Avgangsoversikt</div>', unsafe_allow_html=True)
@@ -363,28 +401,31 @@ with col2:
 current_date = datetime.now().strftime("%A, %d. %B %Y")
 st.subheader(f"📅 {current_date}")
 
-# Konverter til DataFrame for enklere håndtering
+# Konverter til DataFrame og sorter etter tid
 if st.session_state.departures:
     df = pd.DataFrame(st.session_state.departures)
-    
+    # Konverter tid til sortable format
+    df['time_sort'] = pd.to_datetime(df['time'], format='%H:%M').dt.time
+    df = df.sort_values('time_sort').drop(columns=['time_sort'])
+
     # Filtrer data
+    df_filtered = df.copy()
     if search_term:
         mask = (
-            df['unitNumber'].str.contains(search_term, case=False) |
-            df['destination'].str.contains(search_term, case=False) |
-            df['type'].str.contains(search_term, case=False) |
-            df['status'].str.contains(search_term, case=False) |
-            df['comment'].fillna('').str.contains(search_term, case=False)
+            df_filtered['unitNumber'].str.contains(search_term, case=False) |
+            df_filtered['destination'].str.contains(search_term, case=False) |
+            df_filtered['type'].str.contains(search_term, case=False) |
+            df_filtered['status'].str.contains(search_term, case=False) |
+            df_filtered['comment'].fillna('').str.contains(search_term, case=False)
         )
-        df = df[mask]
+        df_filtered = df_filtered[mask]
     
     if filter_dest != "Alle":
-        df = df[df['destination'] == filter_dest]
+        df_filtered = df_filtered[df_filtered['destination'] == filter_dest]
     
-    # Vis data i tabell
-    if not df.empty:
-        # Vis hver avgang i en expander
-        for i, row in df.iterrows():
+    # Vis data
+    if not df_filtered.empty:
+        for i, row in df_filtered.iterrows():
             type_icon = type_icons.get(row['type'], "📦")
             status_icon = status_icons.get(row['status'], "📊")
             type_color = type_colors.get(row['type'], "#000000")
@@ -393,7 +434,12 @@ if st.session_state.departures:
             with st.expander(f"{type_icon} {row['unitNumber']} - {row['destination']} - {row['time']}", expanded=False):
                 cols = st.columns([3, 1])
                 with cols[0]:
-                    st.write(f"**📋 Enhetsnummer:** {row['unitNumber']}")
+                    st.markdown(f"""
+                    <div style="display: flex; align-items: center;">
+                        <strong>📋 Enhetsnummer:</strong> <span style="margin-left: 5px;">{row['unitNumber']}</span>
+                        <button class="copy-btn" onclick="navigator.clipboard.writeText('{row['unitNumber']}')">📋</button>
+                    </div>
+                    """, unsafe_allow_html=True)
                     st.write(f"**📍 Destinasjon:** {row['destination']}")
                     st.write(f"**⏰ Avgangstid:** {row['time']}")
                     st.write(f"**🚪 Luke:** {row['gate']}")
@@ -416,20 +462,18 @@ else:
     st.info("📝 Ingen avganger registrert ennå")
 
 # Statistikk og diagrammer
-if st.session_state.departures and not df.empty:
+if st.session_state.departures and not df_filtered.empty:
     st.markdown("---")
     st.header("📊 Statistikk og diagrammer")
     
-    # Beregn statistikk
-    type_count = df['type'].value_counts().to_dict()
-    status_count = df['status'].value_counts().to_dict()
-    dest_count = df['destination'].value_counts().to_dict()
+    type_count = df_filtered['type'].value_counts().to_dict()
+    status_count = df_filtered['status'].value_counts().to_dict()
+    dest_count = df_filtered['destination'].value_counts().to_dict()
     
-    # Vis nøkkeltall med ikoner
     st.subheader("📈 Nøkkeltall")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown(f'<div class="metric-card"><h3>📊 Totalt antall</h3><p style="font-size: 24px; font-weight: bold; color: #1E3A8A; margin: 0;">{len(df)}</p></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card"><h3>📊 Totalt</h3><p style="font-size: 24px; font-weight: bold; color: #1E3A8A; margin: 0;">{len(df_filtered)}</p></div>', unsafe_allow_html=True)
     with col2:
         st.markdown(f'<div class="metric-card tog"><h3>🚆 Tog</h3><p style="font-size: 24px; font-weight: bold; color: #1E3A8A; margin: 0;">{type_count.get("Tog", 0)}</p></div>', unsafe_allow_html=True)
     with col3:
@@ -437,32 +481,20 @@ if st.session_state.departures and not df.empty:
     with col4:
         st.markdown(f'<div class="metric-card tralle"><h3>🛻 Tralle</h3><p style="font-size: 24px; font-weight: bold; color: #1E3A8A; margin: 0;">{type_count.get("Tralle", 0)}</p></div>', unsafe_allow_html=True)
     
-    # Diagrammer
     col1, col2 = st.columns(2)
-    
     with col1:
         if type_count:
-            fig_type = px.pie(
-                values=list(type_count.values()),
-                names=list(type_count.keys()),
-                title="📊 Avganger per Type",
-                color_discrete_sequence=['#6366F1', '#10B981', '#F59E0B', '#8B5CF6']
-            )
+            fig_type = px.pie(values=list(type_count.values()), names=list(type_count.keys()),
+                              title="📊 Avganger per Type", color_discrete_sequence=['#6366F1', '#10B981', '#F59E0B', '#8B5CF6'])
             st.plotly_chart(fig_type, use_container_width=True)
-    
     with col2:
         if dest_count:
-            fig_dest = px.bar(
-                x=list(dest_count.keys()),
-                y=list(dest_count.values()),
-                title="📍 Avganger per Destinasjon",
-                labels={'x': 'Destinasjon', 'y': 'Antall'},
-                color=list(dest_count.keys()),
-                color_discrete_sequence=px.colors.qualitative.Plotly
-            )
+            fig_dest = px.bar(x=list(dest_count.keys()), y=list(dest_count.values()),
+                              title="📍 Avganger per Destinasjon", labels={'x': 'Destinasjon', 'y': 'Antall'},
+                              color=list(dest_count.keys()), color_discrete_sequence=px.colors.qualitative.Plotly)
             st.plotly_chart(fig_dest, use_container_width=True)
 
-# Nedlastings- og administrasjonsknapper
+# Datahåndtering
 st.markdown("---")
 st.header("💾 Datahåndtering")
 col1, col2, col3, col4 = st.columns(4)
@@ -470,7 +502,7 @@ col1, col2, col3, col4 = st.columns(4)
 with col1:
     if st.button("🗑️ Tøm alle avganger", type="secondary"):
         if st.session_state.departures:
-            if st.checkbox("⚠️ Bekreft at du vil slette ALLE avganger"):
+            if st.checkbox("⚠️ Bekreft sletting av ALLE avganger"):
                 clear_all_departures()
                 st.rerun()
         else:
@@ -478,7 +510,7 @@ with col1:
 
 with col2:
     csv_data = export_to_csv()
-    if csv_data:
+    if csv_
         st.download_button(
             label="📊 Eksporter til CSV",
             data=csv_data,
@@ -501,13 +533,12 @@ with col4:
     if uploaded_file is not None:
         load_backup(uploaded_file)
 
-# Vis redigeringsskjema hvis vi er i redigeringsmodus
-if st.session_state.editing_index is not None and st.session_state.edit_data:
+# Redigeringsskjema
+if st.session_state.editing_index is not None and st.session_state.edit_
     st.markdown('<div class="edit-form">', unsafe_allow_html=True)
     st.markdown("### 🔧 Rediger Avgang")
     
     with st.form("edit_form"):
-        # Bruk unike nøkler for redigeringsskjemaet
         edit_unit_number = st.text_input(
             "📋 Enhetsnummer:", 
             value=st.session_state.edit_data['unitNumber'],
@@ -523,7 +554,6 @@ if st.session_state.editing_index is not None and st.session_state.edit_data:
             key="edit_destination"
         )
         
-        # Konverter tidstreng til time-objekt
         try:
             time_obj = datetime.strptime(st.session_state.edit_data['time'], "%H:%M").time()
         except:
@@ -548,7 +578,7 @@ if st.session_state.editing_index is not None and st.session_state.edit_data:
         
         edit_comment = st.text_area(
             "💬 Kommentar (valgfritt):", 
-            value=st.session_state.edit_data['comment'] if st.session_state.edit_data['comment'] else "",
+            value=st.session_state.edit_data['comment'] or "",
             key="edit_comment"
         )
         
@@ -559,8 +589,8 @@ if st.session_state.editing_index is not None and st.session_state.edit_data:
             cancel = st.form_submit_button("❌ Avbryt")
         
         if submitted:
-            if not all([edit_unit_number, edit_destination, edit_gate, edit_type, edit_status]):
-                show_toast("Vennligst fyll ut alle obligatoriske felter", "error")
+            if not all([edit_unit_number.strip(), edit_destination, edit_gate.strip(), edit_type, edit_status]):
+                show_toast("⚠️ Vennligst fyll ut alle obligatoriske felter", "error")
             else:
                 time_str = edit_time.strftime("%H:%M")
                 update_departure(
@@ -573,7 +603,6 @@ if st.session_state.editing_index is not None and st.session_state.edit_data:
                     edit_status,
                     edit_comment
                 )
-                st.rerun()
         
         if cancel:
             st.session_state.editing_index = None
