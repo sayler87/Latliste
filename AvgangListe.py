@@ -493,7 +493,6 @@ if st.session_state.departures and not df_filtered.empty:
                               title="📍 Avganger per Destinasjon", labels={'x': 'Destinasjon', 'y': 'Antall'},
                               color=list(dest_count.keys()), color_discrete_sequence=px.colors.qualitative.Plotly)
             st.plotly_chart(fig_dest, use_container_width=True)
-
 # Datahåndtering
 st.markdown("---")
 st.header("💾 Datahåndtering")
@@ -508,25 +507,30 @@ with col1:
         else:
             show_toast("Ingen avganger å slette", "info")
 
-    with col2:
-        csv_data = export_to_csv()
-        if csv_data is not None:
-            st.download_button(
-                label="📊 Eksporter til CSV",
-                data=csv_data,
-                file_name=f"avganger_{datetime.now().strftime('%Y-%m-%d')}.csv",
-                mime="text/csv"
-            )
-    with col3:
-        backup_json = backup_data()
-        if backup_json is not None:  # Her var det kanskje "if backup_"
-            st.download_button(
-                label="💾 Last ned backup (JSON)",
-                data=backup_json,
-                file_name=f"backup_avganger_{datetime.now().strftime('%Y-%m-%d')}.json",
-                mime="application/json"
-            )
+with col2:
+    csv_data = export_to_csv()
+    if csv_data is not None:
+        st.download_button(
+            label="📊 Eksporter til CSV",
+            data=csv_data,
+            file_name=f"avganger_{datetime.now().strftime('%Y-%m-%d')}.csv",
+            mime="text/csv"
+        )
 
+with col3:
+    backup_json = backup_data()
+    if backup_json is not None:
+        st.download_button(
+            label="💾 Last ned backup (JSON)",
+            data=backup_json,
+            file_name=f"backup_avganger_{datetime.now().strftime('%Y-%m-%d')}.json",
+            mime="application/json"
+        )
+
+with col4:
+    uploaded_file = st.file_uploader("📤 Last opp backup", type="json", key="backup_uploader")
+    if uploaded_file is not None:
+        load_backup(uploaded_file)
 with col4:
     uploaded_file = st.file_uploader("📤 Last opp backup", type="json", key="backup_uploader")
     if uploaded_file is not None:
