@@ -127,8 +127,6 @@ if 'toast_message' not in st.session_state:
     st.session_state.toast_message = None
 if 'toast_type' not in st.session_state:
     st.session_state.toast_type = None
-if 'file_uploaded' not in st.session_state:
-    st.session_state.file_uploaded = False
 
 # Ikoner for typer og status
 type_icons = {
@@ -251,7 +249,6 @@ def load_backup(uploaded_file):
         st.session_state.departures = data
         save_data()
         show_toast("✅ Backup lastet opp!", "success")
-        st.session_state.file_uploaded = True
     except Exception as e:
         show_toast(f"❌ Feil ved lasting: {str(e)}", "error")
 
@@ -493,6 +490,7 @@ if st.session_state.departures and not df_filtered.empty:
                               title="📍 Avganger per Destinasjon", labels={'x': 'Destinasjon', 'y': 'Antall'},
                               color=list(dest_count.keys()), color_discrete_sequence=px.colors.qualitative.Plotly)
             st.plotly_chart(fig_dest, use_container_width=True)
+
 # Datahåndtering
 st.markdown("---")
 st.header("💾 Datahåndtering")
@@ -528,11 +526,11 @@ with col3:
         )
 
 with col4:
-    uploaded_file = st.file_uploader("📤 Last opp backup", type="json", key="backup_uploader")
-    if uploaded_file is not None:
-        load_backup(uploaded_file)
-with col4:
-    uploaded_file = st.file_uploader("📤 Last opp backup", type="json", key="backup_uploader")
+    uploaded_file = st.file_uploader(
+        "📤 Last opp backup (JSON)",
+        type="json",
+        key="upload_backup_json"  # Unik key – løser StreamlitDuplicateElementKey
+    )
     if uploaded_file is not None:
         load_backup(uploaded_file)
 
