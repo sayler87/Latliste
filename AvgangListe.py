@@ -508,19 +508,19 @@ with col1:
         else:
             show_toast("Ingen avganger å slette", "info")
 
-with col2:
-    csv_data = export_to_csv()
-    if csv_
-        st.download_button(
-            label="📊 Eksporter til CSV",
-            data=csv_data,
-            file_name=f"avganger_{datetime.now().strftime('%Y-%m-%d')}.csv",
-            mime="text/csv"
-        )
+    with col2:
+        csv_data = export_to_csv()
+        if csv_data is not None:
+            st.download_button(
+                label="📊 Eksporter til CSV",
+                data=csv_data,
+                file_name=f"avganger_{datetime.now().strftime('%Y-%m-%d')}.csv",
+                mime="text/csv"
+            )
 
 with col3:
     backup_json = backup_data()
-    if backup_json:
+    if backup_json is not None:
         st.download_button(
             label="💾 Last ned backup (JSON)",
             data=backup_json,
@@ -534,7 +534,7 @@ with col4:
         load_backup(uploaded_file)
 
 # Redigeringsskjema
-if st.session_state.editing_index is not None and st.session_state.edit_
+if st.session_state.editing_index is not None and st.session_state.edit_data is not None:
     st.markdown('<div class="edit-form">', unsafe_allow_html=True)
     st.markdown("### 🔧 Rediger Avgang")
     
