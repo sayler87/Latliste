@@ -320,16 +320,11 @@ if st.session_state.toast_message:
 # Sidebar for registrering
 with st.sidebar:
     st.markdown('<h1 style="color: #1E3A8A; text-align: center;">🚢 Registrer Avganger</h1>', unsafe_allow_html=True)
-    
-    # Rask søk etter enhet
-    quick_search = st.text_input("🔍 Sjekk enhet (TOG1234):")
-    if quick_search:
-        matches = [d for d in st.session_state.departures if quick_search.upper() in d['unitNumber']]
-        if matches:
-            for m in matches:
-                st.caption(f"✅ {m['unitNumber']} → {m['destination']} ({m['status']})")
-        else:
-            st.caption("❌ Ingen treff")
+
+
+  # Sidebar for registrering
+with st.sidebar:
+    st.markdown('<h1 style="color: #1E3A8A; text-align: center;">🚢 Registrer Avganger</h1>', unsafe_allow_html=True)
 
     # Skjema for registrering
     with st.form("departure_form"):
@@ -362,6 +357,11 @@ with st.sidebar:
                     time_str = time_val.strftime("%H:%M")
                     add_departure(unit_number, destination, time_str, gate, type_, status, comment)
                     st.rerun()
+
+    # Demo-knapp
+    if st.button("🧪 Last inn eksempeldata"):
+        load_example_data()
+        st.rerun()
 
     # Demo-knapp
     if st.button("🧪 Last inn eksempeldata"):
