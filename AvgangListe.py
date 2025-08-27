@@ -323,14 +323,14 @@ with st.sidebar:
 
     # Skjema for registrering
     with st.form("departure_form"):
-        unit_number = st.text_input("📋 Enhetsnummer (f.eks. TOG1234):", key="unit_number_input")
-        destination = st.selectbox("📍 Destinasjon:", ["", "TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"], key="destination_select")
-        time_val = st.time_input("⏰ Avgangstid:", key="time_input")
-        gate = st.text_input("🚪 Luke:", key="gate_input")
-        type_ = st.selectbox("🚚 Avgangstype:", ["", "Tog", "Bil", "Tralle", "Modul"], key="type_select")
-        status = st.selectbox("📊 Status:", ["", "Levert", "I lager", "Underlasting"], key="status_select")
-        comment = st.text_area("💬 Kommentar (valgfritt):", key="comment_input")
-        submitted = st.form_submit_button("📝 Registrer Avgang", key="submit_departure_btn")
+        unit_number = st.text_input("📋 Enhetsnummer (f.eks. TOG1234):", key="unit_number", max_chars=20)
+        destination = st.selectbox("📍 Destinasjon:", ["", "TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"], key="destination")
+        time_val = st.time_input("⏰ Avgangstid:", key="time_val")
+        gate = st.text_input("🚪 Luke:", key="gate", max_chars=10)
+        type_ = st.selectbox("🚚 Avgangstype:", ["", "Tog", "Bil", "Tralle", "Modul"], key="type")
+        status = st.selectbox("📊 Status:", ["", "Levert", "I lager", "Underlasting"], key="status")
+        comment = st.text_area("💬 Kommentar (valgfritt):", key="comment", max_chars=100)
+        submitted = st.form_submit_button("📝 Registrer Avgang")
         
         if submitted:
             if not unit_number.strip():
@@ -353,8 +353,8 @@ with st.sidebar:
                     add_departure(unit_number, destination, time_str, gate, type_, status, comment)
                     st.rerun()
 
-    # ✅ FIKSET: Knapp med unik, fast key
-    if st.button("🧪 Last inn eksempeldata", key="load_example_data_btn_unique_v5"):
+    # Demo-knapp – med unik key!
+    if st.button("🧪 Last inn eksempeldata", key="load_example_data_button"):
         load_example_data()
         st.rerun()
 
@@ -364,9 +364,9 @@ st.markdown('<div class="main-header">📋 Avgangsoversikt</div>', unsafe_allow_
 # Søk og filter
 col1, col2 = st.columns([3, 1])
 with col1:
-    search_term = st.text_input("🔍 Søk på enhetsnummer, destinasjon, type...", key="search_input")
+    search_term = st.text_input("🔍 Søk på enhetsnummer, destinasjon, type...", key="search")
 with col2:
-    filter_dest = st.selectbox("📍 Filter destinasjon:", ["Alle"] + ["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"], key="filter_dest_select")
+    filter_dest = st.selectbox("📍 Filter destinasjon:", ["Alle"] + ["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"], key="filter_dest")
 
 # Vis dato
 current_date = datetime.now().strftime("%A, %d. %B %Y")
@@ -415,12 +415,12 @@ if st.session_state.departures:
                     st.write(f"**💬 Kommentar:** {row['comment'] if pd.notna(row['comment']) and row['comment'] else 'Ingen'}")
                 
                 with cols[1]:
-                    if st.button("✏️ Rediger", key=f"edit_{i}_unique_v5"):
+                    if st.button("✏️ Rediger", key=f"edit_{i}"):
                         st.session_state.editing_index = i
                         st.session_state.edit_data = row.to_dict()
                         st.rerun()
                     
-                    if st.button("🗑️ Slett", key=f"delete_{i}_unique_v5"):
+                    if st.button("🗑️ Slett", key=f"delete_{i}"):
                         delete_departure(i)
                         st.rerun()
     else:
@@ -467,9 +467,9 @@ st.header("💾 Datahåndtering")
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    if st.button("🗑️ Tøm alle avganger", type="secondary", key="clear_all_btn_unique_v5"):
+    if st.button("🗑️ Tøm alle avganger", type="secondary", key="clear_all_button"):
         if st.session_state.departures:
-            if st.checkbox("⚠️ Bekreft sletting av ALLE avganger", key="confirm_clear_v5"):
+            if st.checkbox("⚠️ Bekreft sletting av ALLE avganger", key="confirm_clear"):
                 clear_all_departures()
                 st.rerun()
         else:
@@ -483,7 +483,7 @@ with col2:
             data=csv_data,
             file_name=f"avganger_{datetime.now().strftime('%Y-%m-%d')}.csv",
             mime="text/csv",
-            key="download_csv_unique_v5"
+            key="download_csv"
         )
 
 with col3:
@@ -494,14 +494,14 @@ with col3:
             data=backup_json,
             file_name=f"backup_avganger_{datetime.now().strftime('%Y-%m-%d')}.json",
             mime="application/json",
-            key="download_backup_unique_v5"
+            key="download_backup"
         )
 
 with col4:
     uploaded_file = st.file_uploader(
         "📤 Last opp backup (JSON)",
         type="json",
-        key="upload_backup_final_v5"
+        key="upload_backup_final_v2"  # Unik key!
     )
     if uploaded_file is not None:
         load_backup(uploaded_file)
@@ -512,38 +512,38 @@ if st.session_state.editing_index is not None and st.session_state.edit_data is 
     st.markdown("### 🔧 Rediger Avgang")
     
     with st.form("edit_form"):
-        edit_unit_number = st.text_input("📋 Enhetsnummer:", value=st.session_state.edit_data['unitNumber'], key="edit_unit_number_input")
+        edit_unit_number = st.text_input("📋 Enhetsnummer:", value=st.session_state.edit_data['unitNumber'], key="edit_unit_number").upper()
         edit_destination = st.selectbox(
             "📍 Destinasjon:",
             ["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"],
             index=["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"].index(st.session_state.edit_data['destination']),
-            key="edit_destination_select"
+            key="edit_destination"
         )
         try:
             time_obj = datetime.strptime(st.session_state.edit_data['time'], "%H:%M").time()
         except:
             time_obj = datetime.now().time()
-        edit_time = st.time_input("⏰ Avgangstid:", value=time_obj, key="edit_time_input")
-        edit_gate = st.text_input("🚪 Luke:", value=st.session_state.edit_data['gate'], key="edit_gate_input")
+        edit_time = st.time_input("⏰ Avgangstid:", value=time_obj, key="edit_time")
+        edit_gate = st.text_input("🚪 Luke:", value=st.session_state.edit_data['gate'], key="edit_gate")
         edit_type = st.selectbox(
             "🚚 Avgangstype:",
             ["Tog", "Bil", "Tralle", "Modul"],
             index=["Tog", "Bil", "Tralle", "Modul"].index(st.session_state.edit_data['type']),
-            key="edit_type_select"
+            key="edit_type"
         )
         edit_status = st.selectbox(
             "📊 Status:",
             ["Levert", "I lager", "Underlasting"],
             index=["Levert", "I lager", "Underlasting"].index(st.session_state.edit_data['status']),
-            key="edit_status_select"
+            key="edit_status"
         )
-        edit_comment = st.text_area("💬 Kommentar:", value=st.session_state.edit_data['comment'] or "", key="edit_comment_input")
+        edit_comment = st.text_area("💬 Kommentar:", value=st.session_state.edit_data['comment'] or "", key="edit_comment")
         
         col1, col2 = st.columns(2)
         with col1:
-            submitted = st.form_submit_button("💾 Oppdater", key="update_departure_btn_v5")
+            submitted = st.form_submit_button("💾 Oppdater", key="update_departure_btn")
         with col2:
-            cancel = st.form_submit_button("❌ Avbryt", key="cancel_edit_btn_v5")
+            cancel = st.form_submit_button("❌ Avbryt", key="cancel_edit_btn")
         
         if submitted:
             if not all([edit_unit_number.strip(), edit_destination, edit_gate.strip(), edit_type, edit_status]):
