@@ -43,8 +43,8 @@ def load_data():
             with open(DATA_FILE_JSON, "r", encoding="utf-8") as f:
                 data = json.load(f)
             return data
-        except:
-            st.warning("Kunne ikke lese JSON-fil. Starter med tom liste.")
+        except Exception as e:
+            st.warning(f"Kunne ikke lese JSON-fil: {e}")
             return []
     return []
 
@@ -52,7 +52,6 @@ def save_data(data):
     try:
         with open(DATA_FILE_JSON, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        # Lagre også CSV
         df = pd.DataFrame(data)
         df.to_csv(DATA_FILE_CSV, index=False, encoding='utf-8')
     except Exception as e:
@@ -64,19 +63,6 @@ if 'departures' not in st.session_state:
 
 if 'edit_id' not in st.session_state:
     st.session_state.edit_id = None
-
-if 'show_confirm' not in st.session_state:
-    st.session_state.show_confirm = None
-if 'confirm_message' not in st.session_state:
-    st.session_state.confirm_message = ""
-if 'confirm_color' not in st.session_state:
-    st.session_state.confirm_color = "warning"
-
-# --- Bekreftelsesfunksjon ---
-def show_confirmation(message, action, color="warning"):
-    st.session_state.show_confirm = action
-    st.session_state.confirm_message = message
-    st.session_state.confirm_color = color
 
 # --- Hjelpefunksjoner ---
 def generate_id():
@@ -128,7 +114,7 @@ with st.sidebar:
                     "comment": comment or None
                 }
                 st.session_state.departures.append(new_entry)
-                save_data(st.session_state.departures)  # 🔽 Lagrer med en gang
+                save_data(st.session_state.departures)
                 st.toast("✅ Avgang registrert!", icon="🎉")
                 st.rerun()
 
@@ -139,6 +125,38 @@ st.markdown("""
     <p>Registrering og oversikt over alle avganger</p>
 </div>
 """, unsafe_allow_html=True)
+
+# --- 🔔 Bekreftelsesboks: Vises øverst (etter header) ---
+if 'confirm_action' in st.session_state:
+    st.warning(st.session_state.get('confirm_msg', 'Er du sikker?'), icon="⚠️")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("✅ BEKREFT", key="confirm_yes"):
+            action = st.session_state.confirm_action
+            if action == "delete":
+                id_to_delete = st.session_state.confirm_id
+                st.session_state.departures = [d for d in st.session_state.departures if d['id'] != id_to_delete]
+                save_data(st.session_state.departures)
+                st.toast("🗑️ Avgang slettet!", icon="✅")
+            elif action == "clear_all":
+                st.session_state.departures = []
+                save_data(st.session_state.departures)
+                st.toast("🗑️ Alle avganger slettet!", icon="✅")
+
+            # Nullstill
+            for key in ['confirm_action', 'confirm_id', 'confirm_msg']:
+                st.session_state.pop(key, None)
+            st.rerun()
+
+    with col2:
+        if st.button("❌ AVBRYT", key="confirm_no"):
+            for key in ['confirm_action', 'confirm_id', 'confirm_msg']:
+                st.session_state.pop(key, None)
+            st.rerun()
+
+    # Legg til avstand før neste innhold
+    st.markdown("<br>", unsafe_allow_html=True)
 
 # --- Søk og filtrering ---
 st.markdown("### 📋 OVERSIKT OVER AVGANGER")
@@ -175,16 +193,16 @@ if st.session_state.departures:
         # Slett-knapp
         with cols[8]:
             if st.button(f"🗑️", key=f"btn_delete_{row['id']}"):
-                show_confirmation(
-                    f"Slette avgang **{row['unitNumber']}** til **{row['destination']}**?",
-                    action=f"delete_{row['id']}",
-                    color="warning"
-                )
+                st.session_state.confirm_action = "delete"
+                st.session_state.confirm_id = row['id']
+                st.session_state.confirm_msg = f"Vil du slette avgang **{row['unitNumber']}** til **{row['destination']}**?"
+                st.rerun()
 
         # Rediger-knapp
         with cols[7]:
             if st.button(f"✏️", key=f"edit_{row['id']}"):
                 st.session_state.edit_id = row['id']
+                st.rerun()
 
     # --- Rediger skjema ---
     if st.session_state.edit_id is not None:
@@ -215,7 +233,7 @@ if st.session_state.departures:
                     })
                     save_data(st.session_state.departures)
                     st.session_state.edit_id = None
-                    st.toast("🔁 Oppdatert!", icon="✅")
+                    st.toast("🔁 Avgang oppdatert!", icon="✅")
                     st.rerun()
 
             if st.button("❌ Avbryt redigering"):
@@ -255,14 +273,9 @@ if st.session_state.departures:
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         if st.button("🗑️ TØM ALLE AVGANGER"):
-            if st.session_state.departures:
-                show_confirmation(
-                    "ER DU SIKKER PÅ AT DU VIL SLETTE **ALLE** AVGANGER?",
-                    action="clear_all",
-                    color="error"
-                )
-            else:
-                st.toast("Ingen avganger å slette.", icon="ℹ️")
+            st.session_state.confirm_action = "clear_all"
+            st.session_state.confirm_msg = "ER DU SIKKER PÅ AT DU VIL SLETTE **ALLE** AVGANGER?"
+            st.rerun()
 
     with col2:
         if st.button("🖨️ SKRIV UT"):
@@ -275,34 +288,6 @@ if st.session_state.departures:
     with col4:
         json_data = backup_data()
         st.download_button("💾 LAST NED JSON", json_data, f"backup_{datetime.now().date()}.json", "application/json", key="json_export")
-
-# --- Bekreftelsesboks nederst ---
-if st.session_state.show_confirm:
-    st.markdown("---")
-    if st.session_state.confirm_color == "error":
-        st.error(st.session_state.confirm_message)
-    elif st.session_state.confirm_color == "warning":
-        st.warning(st.session_state.confirm_message)
-    else:
-        st.info(st.session_state.confirm_message)
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("✅ BEKREFT"):
-            action = st.session_state.show_confirm
-            if action.startswith("delete_"):
-                id_to_delete = int(action.split("_")[1])
-                st.session_state.departures = [d for d in st.session_state.departures if d['id'] != id_to_delete]
-            elif action == "clear_all":
-                st.session_state.departures = []
-            save_data(st.session_state.departures)  # 🔽 Lagrer med en gang
-            st.session_state.show_confirm = None
-            st.toast("Handling utført!", icon="🎉")
-            st.rerun()
-    with col2:
-        if st.button("❌ AVBRYT"):
-            st.session_state.show_confirm = None
-            st.rerun()
 
 else:
     st.info("INGEN AVGANGER REGISTRERT ENNÅ.")
