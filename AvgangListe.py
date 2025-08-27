@@ -517,16 +517,15 @@ with col1:
                 file_name=f"avganger_{datetime.now().strftime('%Y-%m-%d')}.csv",
                 mime="text/csv"
             )
-
-with col3:
-    backup_json = backup_data()
-    if backup_json is not None:
-        st.download_button(
-            label="💾 Last ned backup (JSON)",
-            data=backup_json,
-            file_name=f"backup_avganger_{datetime.now().strftime('%Y-%m-%d')}.json",
-            mime="application/json"
-        )
+    with col3:
+        backup_json = backup_data()
+        if backup_json is not None:  # Her var det kanskje "if backup_"
+            st.download_button(
+                label="💾 Last ned backup (JSON)",
+                data=backup_json,
+                file_name=f"backup_avganger_{datetime.now().strftime('%Y-%m-%d')}.json",
+                mime="application/json"
+            )
 
 with col4:
     uploaded_file = st.file_uploader("📤 Last opp backup", type="json", key="backup_uploader")
