@@ -26,64 +26,64 @@ DATA_FILE_CSV = "avganger.csv"
 # --- App konfigurasjon ---
 st.set_page_config(page_title="🚛 Transportsystem", layout="wide")
 
-# --- Forbedret CSS: Mørk modus + Statistikk-grid + Ikonstatus ---
+# --- CSS: Lys tema + Kompakt statistikk-grid (uten diagrammer) ---
 st.markdown("""
 <style>
-    /* --- MØRK MODUS --- */
+    /* --- LYS TEMA --- */
     body {
-        background-color: #0F172A;
-        color: #E2E8F0;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #FFFFFF;
+        color: #1F2937;
+        font-family: 'Segoe UI', sans-serif;
     }
 
     [data-testid="stMain"] {
-        background-color: #0F172A;
+        background-color: #FFFFFF;
+        padding-top: 1rem;
     }
 
     .stSidebar {
-        background-color: #1E293B;
+        background-color: #F9FAFB;
     }
 
     h1, h2, h3 {
-        color: #E2E8F0;
+        color: #1F2937;
     }
 
     /* --- HEADER --- */
-    .main-header, h1 {
-        font-size: 2.2rem;
+    h1 {
+        font-size: 2rem;
         text-align: center;
         margin-bottom: 1rem;
-        color: #60A5FA;
+        color: #2563EB;
         font-weight: 700;
     }
 
     /* --- INPUT-FELTER --- */
     .stTextInput input, .stSelectbox select, .stTextArea textarea, .stTimeInput input {
-        background-color: #334155 !important;
-        color: #E2E8F0 !important;
-        border: 1px solid #475569;
+        background-color: #FFFFFF !important;
+        color: #1F2937 !important;
+        border: 1px solid #D1D5DB;
         border-radius: 8px;
         padding: 0.5rem;
     }
 
     .stTextInput input::placeholder,
     .stTextArea textarea::placeholder {
-        color: #94A3B8 !important;
+        color: #9CA3AF !important;
     }
 
     /* --- KNAPPER --- */
     .stButton > button {
         width: 100%;
-        background-color: #60A5FA;
+        background-color: #2563EB;
         color: white;
         border: none;
         border-radius: 8px;
         padding: 0.6rem;
         font-weight: 600;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
     .stButton > button:hover {
-        background-color: #3B82F6;
+        background-color: #1D4ED8;
     }
 
     /* --- STATUSMERKER --- */
@@ -98,106 +98,88 @@ st.markdown("""
         color: white;
         white-space: nowrap;
     }
+    .status-levert { background-color: #10B981; }
+    .status-lager { background-color: #3B82F6; }
+    .status-underlasting { background-color: #F59E0B; }
+    .status-planlaget { background-color: #6B7280; }
 
-    .status-levert {
-        background-color: #10B981; /* Grønn */
-    }
-    .status-lager {
-        background-color: #3B82F6; /* Blå */
-    }
-    .status-underlasting {
-        background-color: #F59E0B; /* Oransje */
-    }
-    .status-planlaget {
-        background-color: #8B5CF6; /* Lilla */
-    }
-
-    /* --- STATISTIKK GRID (statsGrid) --- */
+    /* --- KOMPAKT STATISTIKK-GRID --- */
     .stats-container {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+        gap: 8px;
         margin: 1rem 0;
     }
 
     .stat-card {
-        background-color: #1E293B;
-        border: 1px solid #334155;
-        border-radius: 10px;
-        padding: 14px;
+        background-color: #F3F4F6;
+        border: 1px solid #E5E7EB;
+        border-radius: 8px;
+        padding: 8px;
         text-align: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
 
     .stat-icon {
-        font-size: 1.6rem;
-        margin-bottom: 0.3rem;
+        font-size: 1.1rem;
     }
 
     .stat-number {
-        font-size: 1.4rem;
+        font-size: 1.1rem;
         font-weight: bold;
-        color: #60A5FA;
+        color: #111827;
     }
 
     .stat-label {
-        font-size: 0.85rem;
-        color: #94A3B8;
-    }
-
-    /* --- TABELLRAD --- */
-    .departure-row {
-        display: flex;
-        padding: 0.7rem;
-        background-color: #1E293B;
-        border: 1px solid #334155;
-        border-radius: 10px;
-        margin-bottom: 0.5rem;
-        font-size: 0.95rem;
-        align-items: center;
+        font-size: 0.75rem;
+        color: #6B7280;
     }
 
     /* --- TOAST --- */
     .toast {
         visibility: hidden;
-        min-width: 280px;
-        margin-left: -140px;
-        background-color: #334155;
+        min-width: 250px;
+        margin-left: -125px;
+        background-color: #374151;
         color: #fff;
         text-align: center;
-        border-radius: 10px;
-        padding: 16px;
+        border-radius: 6px;
+        padding: 12px;
         position: fixed;
         z-index: 10000;
         left: 50%;
         bottom: 50px;
-        font-size: 15px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         opacity: 0;
-        transition: opacity 0.3s, bottom 0.3s;
+        transition: opacity 0.3s;
     }
     .toast.show {
         visibility: visible;
         opacity: 1;
-        bottom: 70px;
         animation: fadeOut 3s ease forwards;
     }
     @keyframes fadeOut {
-        0% { opacity: 1; bottom: 70px; }
-        80% { opacity: 1; }
-        100% { opacity: 0; bottom: 0; }
+        0% { opacity: 1; }
+        100% { opacity: 0; }
     }
 
     /* --- MOBIL --- */
     @media (max-width: 768px) {
         .stats-container {
-            grid-template-columns: 1fr;
-            gap: 10px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
         }
         .stat-card {
-            min-width: 100%;
+            padding: 6px;
         }
-        .main-header, h1 {
+        .stat-number {
+            font-size: 1rem;
+        }
+        .stat-label {
+            font-size: 0.7rem;
+        }
+        h1 {
             font-size: 1.8rem;
         }
     }
@@ -267,7 +249,7 @@ status_icons = {
 # --- Sidebar - Registrer eller Rediger ---
 with st.sidebar:
     st.markdown("<h1 style='text-align: center; font-size: 1.8rem;'>🚛 Transportsystem</h1>", unsafe_allow_html=True)
-    st.markdown("<hr style='border: 1px solid #334155;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
 
     if st.session_state.edit_mode:
         dep = next((d for d in st.session_state.departures if d['id'] == st.session_state.edit_mode), None)
@@ -421,12 +403,10 @@ if st.session_state.departures:
                 st.session_state.confirm_msg = f"Vil du slette **{row['unitNumber']}** til **{row['destination']}**?"
                 st.rerun()
 
-    # --- STATISTIKK GRID (statsGrid) ---
-    st.markdown("### 📊 STATISTIKK OG DIAGRAMMER")
-    st.markdown('<div class="stats-container" id="statsGrid">', unsafe_allow_html=True)
+    # --- KOMPAKT STATISTIKK-GRID (uten overskrift) ---
+    st.markdown('<div class="stats-container">', unsafe_allow_html=True)
 
     full_df = pd.DataFrame(st.session_state.departures)
-
     total = len(full_df)
     levert = len(full_df[full_df['status'] == 'Levert'])
     undervegs = len(full_df[full_df['status'].isin(['Lager', 'Underlasting', 'Planlaget'])])
@@ -435,62 +415,23 @@ if st.session_state.departures:
     traller = len(full_df[full_df['type'] == 'Tralle'])
     moduler = len(full_df[full_df['type'] == 'Modul'])
 
-    # Kort for total, levert, underveis
-    st.markdown(f"""
-    <div class="stat-card">
-        <div class="stat-icon">📋</div>
-        <div class="stat-number">{total}</div>
-        <div class="stat-label">Totalt</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-    <div class="stat-card">
-        <div class="stat-icon">✅</div>
-        <div class="stat-number">{levert}</div>
-        <div class="stat-label">Levert</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-    <div class="stat-card">
-        <div class="stat-icon">🚚</div>
-        <div class="stat-number">{undervegs}</div>
-        <div class="stat-label">Underveis</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-    <div class="stat-card">
-        <div class="stat-icon">🚂</div>
-        <div class="stat-number">{toger}</div>
-        <div class="stat-label">Tog</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-    <div class="stat-card">
-        <div class="stat-icon">🚗</div>
-        <div class="stat-number">{biler}</div>
-        <div class="stat-label">Biler</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-    <div class="stat-card">
-        <div class="stat-icon">🛒</div>
-        <div class="stat-number">{traller}</div>
-        <div class="stat-label">Traller</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-    <div class="stat-card">
-        <div class="stat-icon">📦</div>
-        <div class="stat-number">{moduler}</div>
-        <div class="stat-label">Moduler</div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Statistikk-kort
+    for label, icon, value in [
+        ("Totalt", "📋", total),
+        ("Levert", "✅", levert),
+        ("Underveis", "🚚", undervegs),
+        ("Tog", "🚂", toger),
+        ("Bil", "🚗", biler),
+        ("Tralle", "🛒", traller),
+        ("Modul", "📦", moduler),
+    ]:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-icon">{icon}</div>
+            <div class="stat-number">{value}</div>
+            <div class="stat-label">{label}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
