@@ -26,7 +26,7 @@ DATA_FILE_CSV = "avganger.csv"
 # --- App konfigurasjon ---
 st.set_page_config(page_title="🚛 Transportsystem", layout="wide")
 
-# --- CSS: Lys tema + Kompakt statistikk-grid (uten diagrammer) ---
+# --- CSS: Lys tema + Horisontale statistikk-kort ---
 st.markdown("""
 <style>
     /* --- LYS TEMA --- */
@@ -38,7 +38,6 @@ st.markdown("""
 
     [data-testid="stMain"] {
         background-color: #FFFFFF;
-        padding-top: 1rem;
     }
 
     .stSidebar {
@@ -103,38 +102,6 @@ st.markdown("""
     .status-underlasting { background-color: #F59E0B; }
     .status-planlaget { background-color: #6B7280; }
 
-    /* --- KOMPAKT STATISTIKK-GRID --- */
-    .stats-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-        gap: 8px;
-        margin: 1rem 0;
-    }
-
-    .stat-card {
-        background-color: #F3F4F6;
-        border: 1px solid #E5E7EB;
-        border-radius: 8px;
-        padding: 8px;
-        text-align: center;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-
-    .stat-icon {
-        font-size: 1.1rem;
-    }
-
-    .stat-number {
-        font-size: 1.1rem;
-        font-weight: bold;
-        color: #111827;
-    }
-
-    .stat-label {
-        font-size: 0.75rem;
-        color: #6B7280;
-    }
-
     /* --- TOAST --- */
     .toast {
         visibility: hidden;
@@ -166,19 +133,6 @@ st.markdown("""
 
     /* --- MOBIL --- */
     @media (max-width: 768px) {
-        .stats-container {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-        }
-        .stat-card {
-            padding: 6px;
-        }
-        .stat-number {
-            font-size: 1rem;
-        }
-        .stat-label {
-            font-size: 0.7rem;
-        }
         h1 {
             font-size: 1.8rem;
         }
@@ -403,37 +357,44 @@ if st.session_state.departures:
                 st.session_state.confirm_msg = f"Vil du slette **{row['unitNumber']}** til **{row['destination']}**?"
                 st.rerun()
 
-    # --- KOMPAKT STATISTIKK-GRID (uten overskrift) ---
-    st.markdown('<div class="stats-container">', unsafe_allow_html=True)
+    # --- HORISONTAL STATISTIKK-KORT (ved siden av hverandre) ---
+    st.markdown("### 📊 OVERSIKT")
 
+    # Hent data
     full_df = pd.DataFrame(st.session_state.departures)
-    total = len(full_df)
-    levert = len(full_df[full_df['status'] == 'Levert'])
-    undervegs = len(full_df[full_df['status'].isin(['Lager', 'Underlasting', 'Planlaget'])])
-    toger = len(full_df[full_df['type'] == 'Tog'])
-    biler = len(full_df[full_df['type'] == 'Bil'])
-    traller = len(full_df[full_df['type'] == 'Tralle'])
-    moduler = len(full_df[full_df['type'] == 'Modul'])
+    stats = [
+        {"label": "Totalt", "icon": "📋", "value": len(full_df)},
+        {"label": "Levert", "icon": "✅", "value": len(full_df[full_df['status'] == 'Levert'])},
+        {"label": "Underveis", "icon": "🚚", "value": len(full_df[full_df['status'].isin(['Lager', 'Underlasting', 'Planlaget'])])},
+        {"label": "Tog", "icon": "🚂", "value": len(full_df[full_df['type'] == 'Tog'])},
+        {"label": "Bil", "icon": "🚗", "value": len(full_df[full_df['type'] == 'Bil'])},
+        {"label": "Tralle", "icon": "🛒", "value": len(full_df[full_df['type'] == 'Tralle'])},
+        {"label": "Modul", "icon": "📦", "value": len(full_df[full_df['type'] == 'Modul'])},
+    ]
 
-    # Statistikk-kort
-    for label, icon, value in [
-        ("Totalt", "📋", total),
-        ("Levert", "✅", levert),
-        ("Underveis", "🚚", undervegs),
-        ("Tog", "🚂", toger),
-        ("Bil", "🚗", biler),
-        ("Tralle", "🛒", traller),
-        ("Modul", "📦", moduler),
-    ]:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-icon">{icon}</div>
-            <div class="stat-number">{value}</div>
-            <div class="stat-label">{label}</div>
-        </div>
-        """, unsafe_allow_html=True)
+    # Dynamisk antall kolonner (maks 7, men responsivt)
+    n_cols = min(len(stats), 7)
+    cols = st.columns(n_cols)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    for i, stat in enumerate(stats):
+        with cols[i]:
+            st.markdown(
+                f"""
+                <div style="
+                    text-align: center;
+                    background-color: #F3F4F6;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 8px;
+                    padding: 10px;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                ">
+                    <div style="font-size: 1.4rem; margin-bottom: 0.2rem;">{stat['icon']}</div>
+                    <div style="font-size: 1.2rem; font-weight: bold; color: #111827;">{stat['value']}</div>
+                    <div style="font-size: 0.8rem; color: #6B7280;">{stat['label']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
     # --- SYSTEMHANDLINGER ---
     st.markdown("### ⚙️ HANDLINGER")
