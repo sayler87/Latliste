@@ -34,12 +34,15 @@ st.set_page_config(page_title="🚛 Transportsystem", layout="wide")
 
 # --- CSS: Mørk modus + Mobilvennlig + Sortering ---
 st.markdown("""
+st.markdown("""
+st.markdown("""
 <style>
-    /* --- MØRK MODUS --- */
+    /* --- MØRK MODUS: Optimalisert for PC OG mobil --- */
     body {
-        background-color: #0F172A;
-        color: #E2E8F0;
-        font-family: 'Segoe UI', sans-serif;
+        background-color: #0F172A;  /* Mørk blå-svart */
+        color: #E2E8F0;            /* Lys, men ikke skarpt hvit */
+        font-family: 'Segoe UI', 'Roboto', sans-serif;
+        font-size: 16px;
     }
 
     [data-testid="stMain"] {
@@ -50,8 +53,9 @@ st.markdown("""
         background-color: #1E293B;
     }
 
-    h1, h2, h3 {
-        color: #E2E8F0;
+    h1, h2, h3, h4, h5, h6 {
+        color: #60A5FA;
+        font-weight: 700;
     }
 
     /* --- HEADER --- */
@@ -60,38 +64,46 @@ st.markdown("""
         text-align: center;
         margin-bottom: 1rem;
         color: #60A5FA;
-        font-weight: 700;
     }
 
-    @media (max-width: 768px) {
+    @media (min-width: 1024px) {
         h1 {
-            font-size: 1.6rem;
+            font-size: 2.2rem;  /* Større på PC */
         }
     }
 
-    /* --- INPUT OG FILTER --- */
-    .stTextInput input, .stSelectbox select, .stTextArea textarea {
+    /* --- INPUT-FELTER (PC & mobil) --- */
+    .stTextInput input, 
+    .stSelectbox select, 
+    .stTextArea textarea, 
+    .stTimeInput input {
         background-color: #334155 !important;
-        color: #E2E8F0 !important;
-        border: 1px solid #475569;
+        color: #E2E8F0 !important;           /* Lys tekst */
+        border: 1px solid #475569 !important;
         border-radius: 8px;
         padding: 0.5rem;
+        font-size: 1rem;
     }
 
-    .stTextInput input::placeholder {
-        color: #94A3B8 !important;
+    .stTextInput input::placeholder,
+    .stTextArea textarea::placeholder {
+        color: #94A3B8 !important;           /* Gråaktig, men synlig */
+        opacity: 0.8;
     }
 
     /* --- KNAPPER --- */
     .stButton > button {
-        width: 100%;
         background-color: #60A5FA;
         color: white;
-        border: none;
-        border-radius: 6px;
-        padding: 0.5rem;
+        border-radius: 8px;
+        padding: 0.6rem 1rem;
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 1rem;
+        border: none;
+    }
+
+    .stButton > button:hover {
+        background-color: #3B82F6;
     }
 
     /* --- STATUSMERKER --- */
@@ -101,7 +113,7 @@ st.markdown("""
         gap: 0.3rem;
         padding: 0.25rem 0.6rem;
         border-radius: 14px;
-        font-size: 0.8rem;
+        font-size: 0.9rem;
         font-weight: 600;
         color: white;
         white-space: nowrap;
@@ -111,33 +123,35 @@ st.markdown("""
     .status-underlasting { background-color: #F59E0B; }
     .status-planlaget { background-color: #8B5CF6; }
 
-    /* --- TABELL PÅ MOBIL --- */
+    /* --- TABELL: Bedre lesbarhet på PC --- */
     .departure-row {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 4px 8px;
-        padding: 0.6rem;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 8px;
+        padding: 0.8rem;
         background-color: #1E293B;
         border: 1px solid #334155;
-        border-radius: 8px;
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
+        border-radius: 10px;
+        margin-bottom: 0.6rem;
+        font-size: 1rem;                    /* Større tekst på PC */
     }
 
     .dep-label {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         color: #94A3B8;
+        font-weight: 500;
     }
 
     .dep-value {
         font-weight: 500;
+        color: #E2E8F0;
     }
 
-    /* --- STATISTIKK KORT --- */
+    /* --- STATISTIKK-KORT --- */
     .stats-container {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 12px;
         margin: 1rem 0;
     }
 
@@ -145,36 +159,37 @@ st.markdown("""
         background-color: #1E293B;
         border: 1px solid #334155;
         border-radius: 8px;
-        padding: 10px;
+        padding: 12px;
         text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
 
     .stat-number {
-        font-size: 1.2rem;
+        font-size: 1.3rem;                  /* Tydelig på PC */
         font-weight: bold;
         color: #60A5FA;
     }
 
     .stat-label {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         color: #94A3B8;
     }
 
     /* --- TOAST --- */
     .toast {
         visibility: hidden;
-        min-width: 250px;
-        margin-left: -125px;
+        min-width: 280px;
+        margin-left: -140px;
         background-color: #334155;
         color: #fff;
         text-align: center;
-        border-radius: 6px;
-        padding: 12px;
+        border-radius: 8px;
+        padding: 14px;
         position: fixed;
         z-index: 10000;
         left: 50%;
         bottom: 70px;
-        font-size: 14px;
+        font-size: 15px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         opacity: 0;
         transition: opacity 0.3s;
@@ -189,21 +204,25 @@ st.markdown("""
         100% { opacity: 0; }
     }
 
-    /* --- MOBIL --- */
+    /* --- MOBILTILPASNING --- */
     @media (max-width: 768px) {
-        .main-header, h1 {
-            font-size: 1.6rem;
-        }
-        .stButton > button {
-            font-size: 0.85rem;
-            padding: 0.4rem;
-        }
-        .status-badge {
-            font-size: 0.75rem;
-            padding: 0.2rem 0.5rem;
+        .departure-row {
+            font-size: 0.9rem;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 8px;
         }
         .dep-label, .dep-value {
             font-size: 0.85rem;
+        }
+        .stat-number {
+            font-size: 1.1rem;
+        }
+        h1 {
+            font-size: 1.6rem;
+        }
+        .stButton > button {
+            font-size: 0.9rem;
+            padding: 0.5rem;
         }
     }
 </style>
