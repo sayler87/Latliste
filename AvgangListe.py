@@ -196,7 +196,7 @@ type_icons = {
 status_icons = {
     "Levert": "✅",
     "Lager": "📦",
-    "Underlasting": "🚚",
+    "LASTER NÅ.": "🚚",
     "Planlaget": "📅"
 }
 
@@ -219,8 +219,8 @@ with st.sidebar:
                 e_gate = st.text_input("🚪 Luke *", dep['gate']).upper()
                 e_type = st.selectbox("📦 Type *", ["Tog", "Bil", "Tralle", "Modul"],
                     index=["Tog", "Bil", "Tralle", "Modul"].index(dep['type']))
-                e_status = st.selectbox("🚦 Status *", ["Levert", "Lager", "Underlasting", "Planlaget"],
-                    index=["Levert", "Lager", "Underlasting", "Planlaget"].index(dep['status']))
+                e_status = st.selectbox("🚦 Status *", ["Levert", "Lager", "LASTER NÅ.", "Planlaget"],
+                    index=["Levert", "Lager", "LASTER NÅ.", "Planlaget"].index(dep['status']))
                 e_comment = st.text_area("💬 Kommentar", dep['comment'] or "").upper()
 
                 col1, col2 = st.columns(2)
@@ -252,7 +252,7 @@ with st.sidebar:
             departure_time = st.time_input("⏱️ Avgangstid *", value="now")
             gate = st.text_input("🚪 Luke *", placeholder="A1").upper()
             transport_type = st.selectbox("📦 Type *", ["", "Tog", "Bil", "Tralle", "Modul"])
-            status = st.selectbox("🚦 Status *", ["", "Levert", "Lager", "Underlasting", "Planlaget"])
+            status = st.selectbox("🚦 Status *", ["", "Levert", "Lager", "LASTER NÅ", "Planlaget"])
             comment = st.text_area("💬 Kommentar", placeholder="FORSINKET, LASTER NÅ...").upper()
 
             if st.form_submit_button("✅ REGISTRER"):
