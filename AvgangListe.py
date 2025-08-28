@@ -4,15 +4,16 @@ import json
 import os
 from datetime import datetime
 
-# --- Hjelpefunksjon: Last opp JSON uten loop ---
+# --- Hjelpefunksjon: Last opp JSON ---
 def _load_and_apply_json(uploaded_file, file_id):
     try:
         uploaded_data = json.load(uploaded_file)
         if isinstance(uploaded_data, list):
-            # Rensk data ved opplasting
-            for item in uploaded_data:
+            for item in uploaded_
                 if item.get("status") == "I lager":
                     item["status"] = "Lager"
+                if item.get("status") == "Planlagt":
+                    item["status"] = "Planlaget"
             st.session_state.departures = uploaded_data
             save_data(st.session_state.departures)
             st.session_state.last_uploaded_file = file_id
@@ -30,63 +31,66 @@ DATA_FILE_CSV = "avganger.csv"
 # --- App konfigurasjon ---
 st.set_page_config(page_title="🚛 Transportsystem", layout="wide")
 
-# --- CSS: Lys tema + Horisontale statistikk-kort ---
+# --- CSS: Mørk modus + Mobilvennlig + Sortering ---
 st.markdown("""
 <style>
-    /* --- LYS TEMA --- */
+    /* --- MØRK MODUS --- */
     body {
-        background-color: #FFFFFF;
-        color: #1F2937;
+        background-color: #0F172A;
+        color: #E2E8F0;
         font-family: 'Segoe UI', sans-serif;
     }
 
     [data-testid="stMain"] {
-        background-color: #FFFFFF;
+        background-color: #0F172A;
     }
 
     .stSidebar {
-        background-color: #F9FAFB;
+        background-color: #1E293B;
     }
 
     h1, h2, h3 {
-        color: #1F2937;
+        color: #E2E8F0;
     }
 
     /* --- HEADER --- */
     h1 {
-        font-size: 2rem;
+        font-size: 1.8rem;
         text-align: center;
         margin-bottom: 1rem;
-        color: #2563EB;
+        color: #60A5FA;
         font-weight: 700;
     }
 
-    /* --- INPUT-FELTER --- */
-    .stTextInput input, .stSelectbox select, .stTextArea textarea, .stTimeInput input {
-        background-color: #FFFFFF !important;
-        color: #1F2937 !important;
-        border: 1px solid #D1D5DB;
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.6rem;
+        }
+    }
+
+    /* --- INPUT OG FILTER --- */
+    .stTextInput input, .stSelectbox select, .stTextArea textarea {
+        background-color: #334155 !important;
+        color: #E2E8F0 !important;
+        border: 1px solid #475569;
         border-radius: 8px;
         padding: 0.5rem;
     }
 
-    .stTextInput input::placeholder,
-    .stTextArea textarea::placeholder {
-        color: #9CA3AF !important;
+    .stTextInput input::placeholder {
+        color: #94A3B8 !important;
     }
 
     /* --- KNAPPER --- */
     .stButton > button {
         width: 100%;
-        background-color: #2563EB;
+        background-color: #60A5FA;
         color: white;
         border: none;
-        border-radius: 8px;
-        padding: 0.6rem;
+        border-radius: 6px;
+        padding: 0.5rem;
         font-weight: 600;
-    }
-    .stButton > button:hover {
-        background-color: #1D4ED8;
+        font-size: 0.9rem;
     }
 
     /* --- STATUSMERKER --- */
@@ -96,7 +100,7 @@ st.markdown("""
         gap: 0.3rem;
         padding: 0.25rem 0.6rem;
         border-radius: 14px;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         font-weight: 600;
         color: white;
         white-space: nowrap;
@@ -104,14 +108,63 @@ st.markdown("""
     .status-levert { background-color: #10B981; }
     .status-lager { background-color: #3B82F6; }
     .status-underlasting { background-color: #F59E0B; }
-    .status-planlaget { background-color: #6B7280; }
+    .status-planlaget { background-color: #8B5CF6; }
+
+    /* --- TABELL PÅ MOBIL --- */
+    .departure-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px 8px;
+        padding: 0.6rem;
+        background-color: #1E293B;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .dep-label {
+        font-size: 0.8rem;
+        color: #94A3B8;
+    }
+
+    .dep-value {
+        font-weight: 500;
+    }
+
+    /* --- STATISTIKK KORT --- */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 10px;
+        margin: 1rem 0;
+    }
+
+    .stat-card {
+        background-color: #1E293B;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #60A5FA;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: #94A3B8;
+    }
 
     /* --- TOAST --- */
     .toast {
         visibility: hidden;
         min-width: 250px;
         margin-left: -125px;
-        background-color: #374151;
+        background-color: #334155;
         color: #fff;
         text-align: center;
         border-radius: 6px;
@@ -119,9 +172,9 @@ st.markdown("""
         position: fixed;
         z-index: 10000;
         left: 50%;
-        bottom: 50px;
+        bottom: 70px;
         font-size: 14px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         opacity: 0;
         transition: opacity 0.3s;
     }
@@ -137,30 +190,38 @@ st.markdown("""
 
     /* --- MOBIL --- */
     @media (max-width: 768px) {
-        h1 {
-            font-size: 1.8rem;
+        .main-header, h1 {
+            font-size: 1.6rem;
+        }
+        .stButton > button {
+            font-size: 0.85rem;
+            padding: 0.4rem;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+        }
+        .dep-label, .dep-value {
+            font-size: 0.85rem;
         }
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- Hjelpefunksjoner: Lagring og lasting ---
+# --- Hjelpefunksjoner ---
 def load_data():
     if os.path.exists(DATA_FILE_JSON):
         try:
             with open(DATA_FILE_JSON, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            # Rensk data: konverter gamle statusverdier
-            for item in data:
+            for item in 
                 if item.get("status") == "I lager":
                     item["status"] = "Lager"
-                if item.get("status") == "Under laste" or item.get("status") == "Laster":
-                    item["status"] = "Underlasting"
                 if item.get("status") == "Planlagt":
                     item["status"] = "Planlaget"
             return data
         except Exception as e:
-            st.warning(f"Kunne ikke lese lokal JSON-fil: {e}")
+            st.warning(f"Kunne ikke lese fil: {e}")
             return []
     return []
 
@@ -168,14 +229,13 @@ def save_data(data):
     try:
         with open(DATA_FILE_JSON, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        df = pd.DataFrame(data)
-        df.to_csv(DATA_FILE_CSV, index=False, encoding='utf-8')
+        pd.DataFrame(data).to_csv(DATA_FILE_CSV, index=False, encoding='utf-8')
         return True
     except Exception as e:
         st.error(f"Lagringsfeil: {e}")
         return False
 
-# --- Initialiser session_state ---
+# --- Initialisering ---
 if 'departures' not in st.session_state:
     st.session_state.departures = load_data()
 
@@ -190,110 +250,71 @@ def generate_id():
     return int(datetime.now().timestamp())
 
 def export_to_csv(data):
-    df = pd.DataFrame(data)
-    return df.to_csv(index=False, encoding='utf-8')
+    return pd.DataFrame(data).to_csv(index=False, encoding='utf-8')
 
 def backup_data():
     return json.dumps(st.session_state.departures, indent=2, ensure_ascii=False)
 
 # --- Ikonmapping ---
-type_icons = {
-    "Tog": "🚂",
-    "Bil": "🚗",
-    "Tralle": "🛒",
-    "Modul": "📦"
-}
+type_icons = {"Tog": "🚂", "Bil": "🚗", "Tralle": "🛒", "Modul": "📦"}
+status_icons = {"Levert": "✅", "Lager": "📦", "Underlasting": "🚚", "Planlaget": "📅"}
 
-# --- Status-ikonmapping ---
-status_icons = {
-    "Levert": "✅",
-    "Lager": "📦",
-    "Underlasting": "🚚",
-    "Planlaget": "📅"
-}
-
-# --- Sidebar - Registrer eller Rediger ---
+# --- Sidebar ---
 with st.sidebar:
-    st.markdown("<h1 style='text-align: center; font-size: 1.8rem;'>🚛 Transportsystem</h1>", unsafe_allow_html=True)
-    st.markdown("<hr style='border: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #60A5FA; text-align: center;'>🚛</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: #E2E8F0;'>Transportsystem</h3>", unsafe_allow_html=True)
+    st.divider()
 
     if st.session_state.edit_mode:
         dep = next((d for d in st.session_state.departures if d['id'] == st.session_state.edit_mode), None)
         if dep:
-            st.subheader("✏️ REDIGER AVGANG")
             with st.form("edit_form"):
                 e_unit = st.text_input("🔢 Enhetsnummer *", dep['unitNumber']).upper()
-                
-                # Destinasjon
                 dest_options = ["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"]
-                current_dest = dep['destination']
-                if current_dest not in dest_options:
-                    current_dest = dest_options[0]
+                current_dest = dep['destination'] if dep['destination'] in dest_options else dest_options[0]
                 e_dest = st.selectbox("📍 Destinasjon *", dest_options, index=dest_options.index(current_dest))
-                
-                # Tid
                 e_time = datetime.strptime(dep['time'], "%H:%M").time()
                 e_time = st.time_input("⏱️ Avgangstid *", e_time)
-                
-                # Luke
                 e_gate = st.text_input("🚪 Luke *", dep['gate']).upper()
-                
-                # Type
                 type_options = ["Tog", "Bil", "Tralle", "Modul"]
-                current_type = dep['type']
-                if current_type not in type_options:
-                    current_type = type_options[0]
-                e_type = st.selectbox("📦 Type *", type_options, index=type_options.index(current_type))
-                
-                # Status
+                e_type = st.selectbox("📦 Type *", type_options, index=type_options.index(dep['type']))
                 status_options = ["Levert", "Lager", "Underlasting", "Planlaget"]
-                current_status = dep['status']
-                if current_status not in status_options:
-                    current_status = "Planlaget"
-                e_status = st.selectbox("🚦 Status *", status_options, index=status_options.index(current_status))
-                
-                # Kommentar
+                e_status = st.selectbox("🚦 Status *", status_options, index=status_options.index(dep['status']))
                 e_comment = st.text_area("💬 Kommentar", dep['comment'] or "").upper()
 
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.form_submit_button("✅ OPPDATER"):
                         dep.update({
-                            'unitNumber': e_unit,
-                            'destination': e_dest,
-                            'time': e_time.strftime("%H:%M"),
-                            'gate': e_gate,
-                            'type': e_type,
-                            'status': e_status,
-                            'comment': e_comment or None
+                            'unitNumber': e_unit, 'destination': e_dest, 'time': e_time.strftime("%H:%M"),
+                            'gate': e_gate, 'type': e_type, 'status': e_status, 'comment': e_comment or None
                         })
                         save_data(st.session_state.departures)
                         st.session_state.edit_mode = None
-                        st.toast("🔁 Oppdatert!", icon="✅")
+                        st.toast("Oppdatert!")
                         st.rerun()
-
                 with col2:
                     if st.form_submit_button("❌ Avbryt"):
                         st.session_state.edit_mode = None
                         st.rerun()
     else:
-        st.subheader("➕ NY AVGANG")
         with st.form("departure_form"):
-            unit_number = st.text_input("🔢 Enhetsnummer *", placeholder="TOG001").upper()
+            st.subheader("➕ Ny avgang")
+            unit_number = st.text_input("🔢 Enhetsnummer *").upper()
             destination = st.selectbox("📍 Destinasjon *", [""] + ["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"])
             departure_time = st.time_input("⏱️ Avgangstid *", value="now")
-            gate = st.text_input("🚪 Luke *", placeholder="A1").upper()
+            gate = st.text_input("🚪 Luke *").upper()
             transport_type = st.selectbox("📦 Type *", ["", "Tog", "Bil", "Tralle", "Modul"])
             status = st.selectbox("🚦 Status *", ["", "Levert", "Lager", "Underlasting", "Planlaget"])
-            comment = st.text_area("💬 Kommentar", placeholder="FORSINKET, LASTER NÅ...").upper()
+            comment = st.text_area("💬 Kommentar").upper()
 
             if st.form_submit_button("✅ REGISTRER"):
                 if not all([unit_number.strip(), destination, gate.strip(), transport_type, status]):
-                    st.toast("❌ Mangler obligatoriske felt!", icon="⚠️")
+                    st.toast("❌ Mangler felt!", icon="⚠️")
                 elif any(d['unitNumber'] == unit_number for d in st.session_state.departures):
-                    st.toast(f"❌ {unit_number} eksisterer allerede!", icon="🚨")
+                    st.toast(f"❌ {unit_number} eksisterer!", icon="🚨")
                 else:
-                    new_entry = {
+                    st.session_state.departures.append({
                         "id": generate_id(),
                         "unitNumber": unit_number,
                         "destination": destination,
@@ -302,54 +323,47 @@ with st.sidebar:
                         "type": transport_type,
                         "status": status,
                         "comment": comment or None
-                    }
-                    st.session_state.departures.append(new_entry)
+                    })
                     save_data(st.session_state.departures)
-                    st.toast("✅ Avgang registrert!", icon="🎉")
+                    st.toast("✅ Registrert!")
                     st.rerun()
 
 # --- Hovedinnhold ---
 st.markdown("<h1>📋 TRANSPORTSYSTEM</h1>", unsafe_allow_html=True)
 
-# --- Bekreftelsesboks ---
+# --- Bekreftelse ---
 if 'confirm_action' in st.session_state:
     st.warning(st.session_state.get('confirm_msg', 'Er du sikker?'), icon="⚠️")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("✅ BEKREFT", key="confirm_yes"):
-            action = st.session_state.confirm_action
-            if action == "delete":
-                id_to_delete = st.session_state.confirm_id
-                st.session_state.departures = [d for d in st.session_state.departures if d['id'] != id_to_delete]
-                save_data(st.session_state.departures)
-                st.toast("🗑️ Avgang slettet!", icon="✅")
-            elif action == "clear_all":
+    yes, no = st.columns(2)
+    with yes:
+        if st.button("✅ BEKREFT", key="yes"):
+            if st.session_state.confirm_action == "delete":
+                st.session_state.departures = [d for d in st.session_state.departures if d['id'] != st.session_state.confirm_id]
+            elif st.session_state.confirm_action == "clear_all":
                 st.session_state.departures = []
-                st.session_state.pop('last_uploaded_file', None)
-                save_data(st.session_state.departures)
-                st.toast("🗑️ Alle slettet!", icon="✅")
-
+            save_data(st.session_state.departures)
+            st.toast("Handling utført!")
             for key in ['confirm_action', 'confirm_id', 'confirm_msg']:
                 st.session_state.pop(key, None)
             st.rerun()
-
-    with col2:
-        if st.button("❌ AVBRYT", key="confirm_no"):
+    with no:
+        if st.button("❌ AVBRYT", key="no"):
             for key in ['confirm_action', 'confirm_id', 'confirm_msg']:
                 st.session_state.pop(key, None)
             st.rerun()
     st.markdown("<br>", unsafe_allow_html=True)
 
-# --- Søk og filtrering ---
-st.markdown("### 🔍 SØK OG FILTRER")
-col1, col2 = st.columns([2, 1])
+# --- Filter og Sortering ---
+st.markdown("### 🔍 FILTRER OG SORTER")
+col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
-    search_term = st.text_input("Enhetsnummer eller destinasjon...", placeholder="Søk her...").upper()
+    search_term = st.text_input("Søk", placeholder="Enhetsnummer eller destinasjon").upper()
 with col2:
-    destinations = sorted(set(d['destination'] for d in st.session_state.departures))
-    filter_dest = st.selectbox("Destinasjon", ["Alle"] + destinations)
+    filter_dest = st.selectbox("Destinasjon", ["Alle"] + sorted(set(d['destination'] for d in st.session_state.departures)))
+with col3:
+    sort_by = st.selectbox("Sorter etter", ["Ingen", "Destinasjon", "Status", "Avgangstid"])
 
-# --- Tabellvisning ---
+# --- Tabell ---
 if st.session_state.departures:
     df = pd.DataFrame(st.session_state.departures)
     df['time'] = pd.to_datetime(df['time'], format='%H:%M', errors='coerce').dt.strftime('%H:%M')
@@ -359,107 +373,86 @@ if st.session_state.departures:
         mask &= df['unitNumber'].str.contains(search_term, na=False) | df['destination'].str.contains(search_term, na=False)
     if filter_dest != "Alle":
         mask &= df['destination'] == filter_dest
-    filtered_df = df[mask].copy()
+    df = df[mask].copy()
 
-    # Vis hver rad
-    for _, row in filtered_df.iterrows():
-        cols = st.columns([2, 2, 2, 2, 2, 3, 4, 1, 1])
-        cols[0].markdown(f"**{row['unitNumber']}**")
-        cols[1].write(row['destination'])
-        cols[2].write(row['time'])
-        cols[3].write(row['gate'])
-        cols[4].write(f"{type_icons.get(row['type'], '📦')} {row['type']}")
+    # Sortering
+    if sort_by == "Destinasjon":
+        df = df.sort_values("destination")
+    elif sort_by == "Status":
+        df = df.sort_values("status")
+    elif sort_by == "Avgangstid":
+        df = df.sort_values("time")
 
-        # Status med ikon og farge
-        status_icon = status_icons.get(row['status'], "📍")
-        status_class = f"status-{row['status'].lower().replace(' ', '-')}"
-        cols[5].markdown(f"<div class='status-badge {status_class}'>{status_icon} {row['status']}</div>", unsafe_allow_html=True)
+    # Visning på mobil: vertikal grid
+    for _, row in df.iterrows():
+        with st.container():
+            st.markdown("""
+            <div class="departure-row">
+                <div><span class="dep-label">Enhetsnr:</span> <span class="dep-value">""" + row['unitNumber'] + """</span></div>
+                <div><span class="dep-label">Dest:</span> <span class="dep-value">""" + row['destination'] + """</span></div>
+                <div><span class="dep-label">Tid:</span> <span class="dep-value">""" + row['time'] + """</span></div>
+                <div><span class="dep-label">Luke:</span> <span class="dep-value">""" + row['gate'] + """</span></div>
+                <div><span class="dep-label">Type:</span> <span class="dep-value">""" + f"{type_icons.get(row['type'], '📦')} {row['type']}" + """</span></div>
+                <div><span class="dep-label">Status:</span> <span class="dep-value">
+                    <div class='status-badge status-""" + row['status'].lower().replace(' ', '-') + """'>""" + status_icons.get(row['status'], "📍") + """ """ + row['status'] + """</div>
+                </span></div>
+                <div><span class="dep-label">Kommentar:</span> <span class="dep-value">""" + (row['comment'] or "–") + """</span></div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        cols[6].write(row['comment'] or "–")
-
-        with cols[7]:
-            if st.button("✏️", key=f"edit_{row['id']}", help="Rediger"):
+        # Knapper
+        col_btn1, col_btn2 = st.columns([1, 4])
+        with col_btn1:
+            if st.button("✏️", key=f"edit_{row['id']}"):
                 st.session_state.edit_mode = row['id']
                 st.rerun()
-
-        with cols[8]:
-            if st.button("🗑️", key=f"del_{row['id']}", help="Slett"):
+        with col_btn2:
+            if st.button("🗑️", key=f"del_{row['id']}"):
                 st.session_state.confirm_action = "delete"
                 st.session_state.confirm_id = row['id']
-                st.session_state.confirm_msg = f"Vil du slette **{row['unitNumber']}** til **{row['destination']}**?"
+                st.session_state.confirm_msg = f"Slette {row['unitNumber']} til {row['destination']}?"
                 st.rerun()
 
-    # --- HORISONTAL STATISTIKK-KORT (ved siden av hverandre) ---
+    # --- Statistikk ---
     st.markdown("### 📊 OVERSIKT")
-
     full_df = pd.DataFrame(st.session_state.departures)
     stats = [
-        {"label": "Totalt", "icon": "📋", "value": len(full_df)},
-        {"label": "Levert", "icon": "✅", "value": len(full_df[full_df['status'] == 'Levert'])},
-        {"label": "Underveis", "icon": "🚚", "value": len(full_df[full_df['status'].isin(['Lager', 'Underlasting', 'Planlaget'])])},
-        {"label": "Tog", "icon": "🚂", "value": len(full_df[full_df['type'] == 'Tog'])},
-        {"label": "Bil", "icon": "🚗", "value": len(full_df[full_df['type'] == 'Bil'])},
-        {"label": "Tralle", "icon": "🛒", "value": len(full_df[full_df['type'] == 'Tralle'])},
-        {"label": "Modul", "icon": "📦", "value": len(full_df[full_df['type'] == 'Modul'])},
+        ("📋", "Totalt", len(full_df)),
+        ("✅", "Levert", len(full_df[full_df['status'] == 'Levert'])),
+        ("🚚", "Underveis", len(full_df[full_df['status'].isin(['Lager', 'Underlasting', 'Planlaget'])])),
+        ("🚂", "Tog", len(full_df[full_df['type'] == 'Tog'])),
+        ("🚗", "Bil", len(full_df[full_df['type'] == 'Bil'])),
+        ("🛒", "Traller", len(full_df[full_df['type'] == 'Tralle'])),
+        ("📦", "Moduler", len(full_df[full_df['type'] == 'Modul'])),
     ]
 
-    n_cols = min(len(stats), 7)
-    cols = st.columns(n_cols)
-
-    for i, stat in enumerate(stats):
+    cols = st.columns(len(stats))
+    for i, (icon, label, value) in enumerate(stats):
         with cols[i]:
-            st.markdown(
-                f"""
-                <div style="
-                    text-align: center;
-                    background-color: #F3F4F6;
-                    border: 1px solid #E5E7EB;
-                    border-radius: 8px;
-                    padding: 10px;
-                    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                ">
-                    <div style="font-size: 1.4rem;">{stat['icon']}</div>
-                    <div style="font-size: 1.2rem; font-weight: bold; color: #111827;">{stat['value']}</div>
-                    <div style="font-size: 0.8rem; color: #6B7280;">{stat['label']}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.markdown(f"""
+            <div class="stat-card">
+                <div>{icon}</div>
+                <div class="stat-number">{value}</div>
+                <div class="stat-label">{label}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-    # --- SYSTEMHANDLINGER ---
+    # --- Handlinger ---
     st.markdown("### ⚙️ HANDLINGER")
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        if st.button("🗑️ Tøm alt"):
-            st.session_state.confirm_action = "clear_all"
-            st.session_state.confirm_msg = "Sikker på at du vil slette **alle** avganger?"
-            st.rerun()
-
-    with col2:
-        if st.button("🖨️ Skriv ut"):
-            st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
-
-    with col3:
-        csv = export_to_csv(st.session_state.departures)
-        st.download_button("📄 CSV", csv, f"avganger_{datetime.now().date()}.csv", "text/csv", key="csv_export")
-
-    with col4:
-        st.download_button("💾 JSON", backup_data(), f"backup_{datetime.now().date()}.json", "application/json", key="json_export")
+    a, b, c, d = st.columns(4)
+    with a: st.button("🗑️ Tøm alt", on_click=lambda: st.session_state.update(confirm_action="clear_all", confirm_msg="Slette ALLE?"))
+    with b: st.button("🖨️ Skriv ut", on_click=lambda: st.write("<script>window.print()</script>", unsafe_allow_html=True))
+    with c: st.download_button("📄 CSV", export_to_csv(st.session_state.departures), "avganger.csv", "text/csv")
+    with d: st.download_button("💾 JSON", backup_data(), "backup.json", "application/json")
 
     # --- Opplasting ---
     st.markdown("### 🔼 Last opp JSON")
-    uploaded_file = st.file_uploader("Velg JSON-fil", type="json", label_visibility="collapsed", key="uploader")
-    if uploaded_file is not None:
-        file_id = f"{uploaded_file.name}_{uploaded_file.size}"
+    uploaded = st.file_uploader("Velg JSON", type="json", label_visibility="collapsed", key="upload")
+    if uploaded:
+        file_id = f"{uploaded.name}_{uploaded.size}"
         if st.session_state.last_uploaded_file != file_id:
-            _load_and_apply_json(uploaded_file, file_id)
+            _load_and_apply_json(uploaded, file_id)
         else:
-            st.caption("📄 Fil er allerede lastet.")
-
-    if st.button("🔄 Nullstill opplasting", key="reset_upload"):
-        st.session_state.pop('last_uploaded_file', None)
-        st.toast("Opplasting nullstilt.")
-        st.rerun()
-
+            st.caption("📄 Allerede lastet")
 else:
-    st.info("📭 Ingen avganger registrert ennå. Legg til en ny avgang i siden til venstre.")
+    st.info("📭 Ingen avganger")
