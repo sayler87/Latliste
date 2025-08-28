@@ -373,87 +373,117 @@ if st.session_state.departures:
                 st.session_state.edit_mode = row['id']
                 st.rerun()
 
-    # --- STATISTIKK (kompakt) ---
-    full_df = pd.DataFrame(st.session_state.departures)
-    counts = full_df['type'].value_counts()
-    status_counts = full_df['status'].value_counts()
+  # --- STATISTIKK OG DIAGRAMMER ---
+st.markdown("### 📊 STATISTIKK OG DIAGRAMMER")
 
-    st.markdown("### 📊 STATISTIKK (TOTALT)")
-    st.markdown('<div class="stats-container">', unsafe_allow_html=True)
+# Konverter til DataFrame
+full_df = pd.DataFrame(st.session_state.departures)
 
-    st.markdown(f"""
-    <div class="stat-card total">
-        <div class="stat-number">{len(full_df)}</div>
-        <div class="stat-label">Totalt</div>
-    </div>
-    """, unsafe_allow_html=True)
+if not full_df.empty:
+    
+    # --- STATISTIKK OG DIAGRAMMER ---
+st.markdown("### 📊 STATISTIKK OG DIAGRAMMER")
 
-    st.markdown(f"""
-    <div class="stat-card type-tog">
-        <div class="stat-number">🚂 {counts.get('Tog', 0)}</div>
-        <div class="stat-label">Tog</div>
-    </div>
-    """, unsafe_allow_html=True)
+# Konverter til DataFrame
+full_df = pd.DataFrame(st.session_state.departures)
 
-    st.markdown(f"""
-    <div class="stat-card type-bil">
-        <div class="stat-number">🚗 {counts.get('Bil', 0)}</div>
-        <div class="stat-label">Bil</div>
-    </div>
-    """, unsafe_allow_html=True)
+if not full_df.empty:
+    # --- Statistikk: Rutenett (statsGrid) ---
+    col1, col2, col3 = st.columns(3)
 
-    levert = status_counts.get('Levert', 0)
-    st.markdown(f"""
-    <div class="stat-card status-card">
-        <div class="stat-number">✅ {levert}</div>
-        <div class="stat-label">Levert</div>
-    </div>
-    """, unsafe_allow_html=True)
+    total = len(full_df)
+    levert = len(full_df[full_df['status'] == 'Levert'])
+    undervegs = len(full_df[full_df['status'].isin(['Lager', 'Underlasting', 'Planlaget'])])
 
-   
-    # --- Systemhandlinger ---
-    st.markdown("### ⚙️ SYSTEMHANDLINGER")
-    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        if st.button("🗑️ TØM ALLE AVGANGER"):
-            st.session_state.confirm_action = "clear_all"
-            st.session_state.confirm_msg = "ER DU SIKKER PÅ AT DU VIL SLETTE **ALLE** AVGANGER?"
-            st.rerun()
-
-    with col2:
-        if st.button("🖨️ SKRIV UT"):
-            st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
-
-    with col3:
-        csv = export_to_csv(st.session_state.departures)
-        st.download_button("📄 EKSPORTER TIL CSV", csv, f"avganger_{datetime.now().date()}.csv", "text/csv", key="csv_export")
-
-    with col4:
-        st.markdown("### 🔼 LAST OPP DATA")
-        uploaded_file = st.file_uploader(
-            "Velg JSON-fil for opplasting", 
-            type="json", 
-            label_visibility="collapsed",
-            key="uploader"
+        st.markdown(
+            """
+            <div class="stat-card total" style="text-align: center;">
+                <div class="stat-number" style="font-size: 2rem;">📋</div>
+                <div class="stat-number">{}</div>
+                <div class="stat-label">Totalt</div>
+            </div>
+            """.format(total),
+            unsafe_allow_html=True
         )
 
-        if uploaded_file is not None:
-            file_id = f"{uploaded_file.name}_{uploaded_file.size}"
-            if st.session_state.last_uploaded_file != file_id:
-                _load_and_apply_json(uploaded_file, file_id)
-            else:
-                st.caption("📄 Fil er allerede lastet.")
+    with col2:
+        st.markdown(
+            """
+            <div class="stat-card status-card" style="text-align: center; background-color: #0A5F38;">
+                <div class="stat-number" style="font-size: 2rem;">✅</div>
+                <div class="stat-number">{}</div>
+                <div class="stat-label">Levert</div>
+            </div>
+            """.format(levert),
+            unsafe_allow_html=True
+        )
 
-        # Knapp for å nullstille opplasting (valgfritt)
-        if st.button("🔄 Nullstill opplasting", key="reset_upload"):
-            if 'last_uploaded_file' in st.session_state:
-                del st.session_state.last_uploaded_file
-            st.toast("Opplasting nullstilt.")
-            st.rerun()
+    with col3:
+        st.markdown(
+            """
+            <div class="stat-card" style="text-align: center; background-color: #7C2D12;">
+                <div class="stat-number" style="font-size: 2rem;">🚚</div>
+                <div class="stat-number">{}</div>
+                <div class="stat-label">Underveis</div>
+            </div>
+            """.format(undervegs),
+            unsafe_allow_html=True
+        )
 
-        # Last ned JSON
-        json_data = backup_data()
-        st.download_button("💾 LAST NED JSON", json_data, f"backup_{datetime.now().date()}.json", "application/json", key="json_export")
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # --- DIAGRAM: Destinasjonsfordeling (destinationChart) ---
+    st.markdown("#### 🌍 Destinasjonsfordeling")
+    dest_counts = full_df['destination'].value_counts().reset_index()
+    dest_counts.columns = ['destination', 'count']
+
+    fig_dest = px.pie(
+        dest_counts,
+        names='destination',
+        values='count',
+        color_discrete_sequence=px.colors.sequential.Bluyl,
+        hole=0.4
+    )
+    fig_dest.update_layout(
+        font=dict(color="#E2E8F0"),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=30, b=30),
+        showlegend=True
+    )
+    st.plotly_chart(fig_dest, use_container_width=True)
+
+    # --- DIAGRAM: Typefordeling (valgfritt) ---
+    st.markdown("#### 🚛 Typefordeling")
+    type_counts = full_df['type'].value_counts().reset_index()
+    type_counts.columns = ['type', 'count']
+
+    fig_type = px.bar(
+        type_counts,
+        x='type',
+        y='count',
+        text='count',
+        color='type',
+        color_discrete_map={
+            "Tog": "#6366F1",
+            "Bil": "#10B981",
+            "Tralle": "#F59E0B",
+            "Modul": "#8B5CF6"
+        },
+        labels={"count": "Antall", "type": "Type"}
+    )
+    fig_type.update_traces(textposition="outside", marker=dict(line=dict(width=0)))
+    fig_type.update_layout(
+        font=dict(color="#E2E8F0"),
+        xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=False),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=30, b=30),
+        showlegend=False
+    )
+    st.plotly_chart(fig_type, use_container_width=True)
 
 else:
-    st.info("INGEN AVGANGER REGISTRERT ENNÅ.")
+    st.info("Ingen data tilgjengelig for diagrammer.")
