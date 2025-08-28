@@ -215,7 +215,7 @@ def load_data():
         try:
             with open(DATA_FILE_JSON, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            for item in 
+            for item in uploaded_data:
                 if item.get("status") == "I lager":
                     item["status"] = "Lager"
                 if item.get("status") == "Planlagt":
