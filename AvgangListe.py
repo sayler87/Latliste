@@ -35,7 +35,7 @@ st.set_page_config(page_title="🚛 Transportsystem", layout="wide")
 # --- CSS: Mørk modus med god lesbarhet på PC og mobil ---
 st.markdown("""
 <style>
-    /* --- MØRK MODUS --- */
+    /* --- MØRK MODUS: Bedre kontrast, spesielt i sidebar --- */
     body {
         background-color: #0F172A;
         color: #E2E8F0;
@@ -47,46 +47,56 @@ st.markdown("""
         background-color: #0F172A;
     }
 
+    /* --- SIDEBAR: Bedre bakgrunn og tekst --- */
     .stSidebar {
-        background-color: #1E293B;
+        background-color: #1E293B !important;
+        color: #E2E8F0;
     }
 
-    h1, h2, h3, h4, h5, h6 {
-        color: #60A5FA;
-        font-weight: 700;
-    }
-
-    /* --- HEADER --- */
-    h1 {
-        font-size: 1.8rem;
-        text-align: center;
-        margin-bottom: 1rem;
+    .stSidebar h1, .stSidebar h2, .stSidebar h3, .stSidebar h4 {
         color: #60A5FA;
     }
 
-    @media (min-width: 1024px) {
-        h1 {
-            font-size: 2.2rem;
-        }
-    }
-
-    /* --- INPUT-FELTER --- */
-    .stTextInput input, 
-    .stSelectbox select, 
-    .stTextArea textarea, 
-    .stTimeInput input {
+    /* --- INPUT-FELTER I SIDEBAR --- */
+    .stSidebar .stTextInput input,
+    .stSidebar .stTextArea textarea,
+    .stSidebar .stTimeInput input {
         background-color: #334155 !important;
-        color: #E2E8F0 !important;
+        color: #E2E8F0 !important;           /* HVIT tekst når skrevet */
         border: 1px solid #475569 !important;
         border-radius: 8px;
         padding: 0.5rem;
         font-size: 1rem;
     }
 
-    .stTextInput input::placeholder,
-    .stTextArea textarea::placeholder {
-        color: #94A3B8 !important;
-        opacity: 0.8;
+    /* --- PLACEHOLDER-TEKST (forbedret lesbarhet) --- */
+    .stSidebar .stTextInput input::placeholder,
+    .stSidebar .stTextArea textarea::placeholder {
+        color: #CBD5E1 !important;           /* Lys grå – ikke for hvit */
+        opacity: 0.7;
+        font-style: italic;
+    }
+
+    /* --- SELECTBOX (dropdowns) --- */
+    .stSidebar .stSelectbox [data-baseweb="select"] {
+        background-color: #334155 !important;
+        color: #E2E8F0 !important;
+    }
+
+    .stSidebar .stSelectbox [data-baseweb="select"] span {
+        color: #E2E8F0 !important;
+    }
+
+    .stSidebar .stSelectbox [role="button"] {
+        background-color: #334155 !important;
+        border: 1px solid #475569 !important;
+    }
+
+    /* --- LABELS I SIDEBAR --- */
+    .stSidebar label {
+        color: #E2E8F0 !important;
+        font-weight: 600;
+        font-size: 1rem;
     }
 
     /* --- KNAPPER --- */
