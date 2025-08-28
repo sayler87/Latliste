@@ -9,6 +9,10 @@ def _load_and_apply_json(uploaded_file, file_id):
     try:
         uploaded_data = json.load(uploaded_file)
         if isinstance(uploaded_data, list):
+            # Rensk data ved opplasting
+            for item in uploaded_data:
+                if item.get("status") == "I lager":
+                    item["status"] = "Lager"
             st.session_state.departures = uploaded_data
             save_data(st.session_state.departures)
             st.session_state.last_uploaded_file = file_id
@@ -146,6 +150,14 @@ def load_data():
         try:
             with open(DATA_FILE_JSON, "r", encoding="utf-8") as f:
                 data = json.load(f)
+            # Rensk data: konverter gamle statusverdier
+            for item in data:
+                if item.get("status") == "I lager":
+                    item["status"] = "Lager"
+                if item.get("status") == "Under laste" or item.get("status") == "Laster":
+                    item["status"] = "Underlasting"
+                if item.get("status") == "Planlagt":
+                    item["status"] = "Planlaget"
             return data
         except Exception as e:
             st.warning(f"Kunne ikke lese lokal JSON-fil: {e}")
@@ -196,7 +208,7 @@ type_icons = {
 status_icons = {
     "Levert": "✅",
     "Lager": "📦",
-    "LASTER NÅ.": "🚚",
+    "Underlasting": "🚚",
     "Planlaget": "📅"
 }
 
@@ -211,16 +223,36 @@ with st.sidebar:
             st.subheader("✏️ REDIGER AVGANG")
             with st.form("edit_form"):
                 e_unit = st.text_input("🔢 Enhetsnummer *", dep['unitNumber']).upper()
-                e_dest = st.selectbox("📍 Destinasjon *",
-                    ["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"],
-                    index=["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"].index(dep['destination']))
+                
+                # Destinasjon
+                dest_options = ["TRONDHEIM", "ÅLESUND", "MOLDE", "FØRDE", "HAUGESUND", "STAVANGER"]
+                current_dest = dep['destination']
+                if current_dest not in dest_options:
+                    current_dest = dest_options[0]
+                e_dest = st.selectbox("📍 Destinasjon *", dest_options, index=dest_options.index(current_dest))
+                
+                # Tid
                 e_time = datetime.strptime(dep['time'], "%H:%M").time()
                 e_time = st.time_input("⏱️ Avgangstid *", e_time)
+                
+                # Luke
                 e_gate = st.text_input("🚪 Luke *", dep['gate']).upper()
-                e_type = st.selectbox("📦 Type *", ["Tog", "Bil", "Tralle", "Modul"],
-                    index=["Tog", "Bil", "Tralle", "Modul"].index(dep['type']))
-                e_status = st.selectbox("🚦 Status *", ["Levert", "Lager", "LASTER NÅ.", "Planlaget"],
-                    index=["Levert", "Lager", "LASTER NÅ.", "Planlaget"].index(dep['status']))
+                
+                # Type
+                type_options = ["Tog", "Bil", "Tralle", "Modul"]
+                current_type = dep['type']
+                if current_type not in type_options:
+                    current_type = type_options[0]
+                e_type = st.selectbox("📦 Type *", type_options, index=type_options.index(current_type))
+                
+                # Status
+                status_options = ["Levert", "Lager", "Underlasting", "Planlaget"]
+                current_status = dep['status']
+                if current_status not in status_options:
+                    current_status = "Planlaget"
+                e_status = st.selectbox("🚦 Status *", status_options, index=status_options.index(current_status))
+                
+                # Kommentar
                 e_comment = st.text_area("💬 Kommentar", dep['comment'] or "").upper()
 
                 col1, col2 = st.columns(2)
@@ -252,7 +284,7 @@ with st.sidebar:
             departure_time = st.time_input("⏱️ Avgangstid *", value="now")
             gate = st.text_input("🚪 Luke *", placeholder="A1").upper()
             transport_type = st.selectbox("📦 Type *", ["", "Tog", "Bil", "Tralle", "Modul"])
-            status = st.selectbox("🚦 Status *", ["", "Levert", "Lager", "LASTER NÅ", "Planlaget"])
+            status = st.selectbox("🚦 Status *", ["", "Levert", "Lager", "Underlasting", "Planlaget"])
             comment = st.text_area("💬 Kommentar", placeholder="FORSINKET, LASTER NÅ...").upper()
 
             if st.form_submit_button("✅ REGISTRER"):
@@ -360,7 +392,6 @@ if st.session_state.departures:
     # --- HORISONTAL STATISTIKK-KORT (ved siden av hverandre) ---
     st.markdown("### 📊 OVERSIKT")
 
-    # Hent data
     full_df = pd.DataFrame(st.session_state.departures)
     stats = [
         {"label": "Totalt", "icon": "📋", "value": len(full_df)},
@@ -372,7 +403,6 @@ if st.session_state.departures:
         {"label": "Modul", "icon": "📦", "value": len(full_df[full_df['type'] == 'Modul'])},
     ]
 
-    # Dynamisk antall kolonner (maks 7, men responsivt)
     n_cols = min(len(stats), 7)
     cols = st.columns(n_cols)
 
@@ -388,7 +418,7 @@ if st.session_state.departures:
                     padding: 10px;
                     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
                 ">
-                    <div style="font-size: 1.4rem; margin-bottom: 0.2rem;">{stat['icon']}</div>
+                    <div style="font-size: 1.4rem;">{stat['icon']}</div>
                     <div style="font-size: 1.2rem; font-weight: bold; color: #111827;">{stat['value']}</div>
                     <div style="font-size: 0.8rem; color: #6B7280;">{stat['label']}</div>
                 </div>
