@@ -9,7 +9,7 @@ def _load_and_apply_json(uploaded_file, file_id):
     try:
         uploaded_data = json.load(uploaded_file)
         if isinstance(uploaded_data, list):
-            for item in uploaded_
+            for item in uploaded_data:
                 if item.get("status") == "I lager":
                     item["status"] = "Lager"
                 if item.get("status") == "Planlagt":
