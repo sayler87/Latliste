@@ -1,43 +1,39 @@
 import streamlit as st
-import base64
+import requests
 
-# Tittel på Streamlit-appen (vises i fanen, ikke nødvendigvis i UI)
+# Sett tittel og layout
 st.set_page_config(page_title="Transportsystem", layout="wide")
 
-# Les inn HTML-filen
-def read_html_file(filepath):
-    with open(filepath, 'r', encoding='utf-8') as file:
-        return file.read()
+# URL til den rå HTML-filen på GitHub
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/dittbrukernavn/transportsystem-html/main/app.html"
 
-# Sti til HTML-filen
-html_file_path = "app.html"
+# Last ned HTML-innhold fra GitHub
+@st.cache_data(ttl=600)  # Cache i 10 minutter
+def get_html_content(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.text
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ Kunne ikke laste HTML-filen: {e}")
+        return None
 
-try:
-    html_content = read_html_file(html_file_path)
+# Hent innholdet
+html_content = get_html_content(GITHUB_RAW_URL)
 
-    # Injiser CSS for å fjerne Streamlit-meny og padding
+if html_content:
+    # Fjern Streamlit-padding og stil for bedre visning
     st.markdown(
         """
         <style>
-        /* Fjern Streamlit-standard padding */
-        .block-container {
-            padding: 0;
-            margin: 0;
-        }
-        iframe {
-            width: 100%;
-            height: 100vh;
-            border: none;
-        }
+        .block-container { padding: 0; margin: 0; }
+        iframe { width: 100%; height: 100vh; border: none; }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # Vis HTML-filen via iframe (anbefalt for bedre kompatibilitet med JS/CSS)
+    # Vis HTML via Streamlit-komponent
     st.components.v1.html(html_content, height=1000, scrolling=True)
-
-except FileNotFoundError:
-    st.error("❌ Kunne ikke finne `app.html`. Sørg for at filen ligger i samme mappe som dette scriptet.")
-except Exception as e:
-    st.error(f"❌ En feil oppstod ved lasting av HTML: {e}")
+else:
+    st.stop()
