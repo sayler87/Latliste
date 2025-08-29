@@ -5,7 +5,7 @@ import requests
 st.set_page_config(page_title="Transportsystem", layout="wide")
 
 # URL til den rå HTML-filen på GitHub
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/dittbrukernavn/transportsystem-html/main/app.html"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sayler87/transportsystem-html/main/app.html"
 
 # Last ned HTML-innhold fra GitHub
 @st.cache_data(ttl=600)  # Cache i 10 minutter
