@@ -1,6 +1,6 @@
 import streamlit as st
 import base64
-
+from pathlib import Path
 # Tittel på Streamlit-appen (vises i fanen, ikke nødvendigvis i UI)
 st.set_page_config(page_title="Transportsystem", layout="wide")
 
