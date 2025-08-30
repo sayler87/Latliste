@@ -1,3 +1,5 @@
+fastapi
+uvicorn
 streamlit
-pandas
-plotly
+python-multipart
+aiofiles
