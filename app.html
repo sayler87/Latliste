@@ -2,24 +2,17 @@
 <html lang="no">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🚛 Registrer Avganger - Transportsystem</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
-      padding: 10px;
+      padding: 20px;
       color: #333;
-      font-size: 16px;
     }
-
     .container {
       max-width: 1400px;
       margin: 0 auto;
@@ -30,83 +23,72 @@
       display: flex;
       gap: 20px;
     }
-
     .sidebar {
       width: 320px;
-      background: #f9f9f9;
-      padding: 20px;
+      background: #fff;
+      padding: 30px;
       border-radius: 15px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-      position: sticky;
-      top: 10px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.08);
       height: fit-content;
+      position: sticky;
+      top: 20px;
     }
-
     .main-content {
       flex: 1;
     }
-
     .header {
-      background: linear-gradient(135deg, #2c3e50, #3498db);
+      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
       color: white;
-      padding: 25px 20px;
+      padding: 30px;
       text-align: center;
-      border-radius: 10px 10px 0 0;
+      border-radius: 15px 15px 0 0;
       margin-bottom: 20px;
     }
-
     .header h1 {
-      font-size: 2.2rem;
-      margin-bottom: 8px;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
       font-weight: 300;
     }
-
     .header p {
-      font-size: 1rem;
+      font-size: 1.1rem;
       opacity: 0.9;
     }
-
     .section {
       background: #f8f9fa;
       border-radius: 10px;
-      padding: 25px;
+      padding: 30px;
       border-left: 5px solid #3498db;
-      margin-bottom: 25px;
+      margin-bottom: 30px;
     }
-
     .section h2 {
       color: #2c3e50;
-      font-size: 1.6rem;
-      margin-bottom: 18px;
+      font-size: 1.8rem;
+      margin-bottom: 20px;
       display: flex;
       align-items: center;
       gap: 10px;
     }
-
     .form-group {
-      margin-bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 15px;
     }
-
     .form-group label {
       font-weight: 600;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       color: #2c3e50;
-      display: block;
       font-size: 0.95rem;
     }
-
     .form-group input,
     .form-group select,
     .form-group textarea {
-      width: 100%;
-      padding: 14px;
+      padding: 12px 15px;
       border: 2px solid #e0e6ed;
       border-radius: 8px;
       font-size: 1rem;
       transition: all 0.3s ease;
       background: white;
     }
-
     .form-group input:focus,
     .form-group select:focus,
     .form-group textarea:focus {
@@ -116,7 +98,7 @@
     }
 
     .btn {
-      padding: 12px 20px;
+      padding: 12px 25px;
       border: none;
       border-radius: 8px;
       font-size: 1rem;
@@ -125,34 +107,48 @@
       transition: all 0.3s ease;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      display: inline-block;
-      text-align: center;
     }
-
     .btn-primary {
       background: linear-gradient(135deg, #3498db, #2980b9);
       color: white;
       width: 100%;
     }
-
     .btn-primary:hover {
       transform: translateY(-2px);
       box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
     }
-
-    .btn-danger, .btn-secondary, .btn-success {
-      width: auto;
-      min-width: 120px;
+    .btn-danger {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: white;
+    }
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+    }
+    .btn-secondary {
+      background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+      color: white;
+    }
+    .btn-secondary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+    }
+    .btn-success {
+      background: linear-gradient(135deg, #27ae60, #229954);
+      color: white;
+    }
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
     }
 
     .search-container {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 15px;
       justify-content: center;
       margin-bottom: 20px;
     }
-
     #searchInput, #filterDestination {
       padding: 12px 16px;
       width: 100%;
@@ -168,26 +164,23 @@
       overflow-x: auto;
       border-radius: 10px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-      margin-top: 15px;
+      margin-top: 20px;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 600px;
+      background: white;
     }
-
     th {
       background: linear-gradient(135deg, #34495e, #2c3e50);
       color: white;
-      padding: 14px;
+      padding: 15px;
       text-align: left;
       font-weight: 600;
       font-size: 0.95rem;
       cursor: pointer;
       position: relative;
     }
-
     th::after {
       content: "↕️";
       position: absolute;
@@ -195,16 +188,13 @@
       opacity: 0.3;
       font-size: 12px;
     }
-
     th.sort-asc::after { content: "↑"; opacity: 1; }
     th.sort-desc::after { content: "↓"; opacity: 1; }
-
     td {
-      padding: 14px;
+      padding: 15px;
       border-bottom: 1px solid #ecf0f1;
       font-size: 0.95rem;
     }
-
     tr:hover {
       background: #f8f9fa;
     }
@@ -212,31 +202,26 @@
     .action-buttons {
       display: flex;
       gap: 8px;
-      flex-wrap: wrap;
     }
-
     .action-buttons .btn {
-      padding: 6px 10px;
-      font-size: 0.8rem;
-      min-width: 70px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
     }
 
     .stats-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
       margin-top: 20px;
     }
-
     .stat-card {
       background: white;
-      padding: 16px;
+      padding: 20px;
       border-radius: 10px;
       text-align: center;
       box-shadow: 0 3px 10px rgba(0,0,0,0.1);
       border-top: 4px solid #3498db;
     }
-
     .stat-card.type-tog { border-top-color: #090deb; }
     .stat-card.type-bil { border-top-color: #f312e8; }
     .stat-card.type-tralle { border-top-color: #3498db; }
@@ -244,18 +229,17 @@
     .stat-card.dest { border-top-color: #16a085; }
 
     .stat-number {
-      font-size: 1.6rem;
+      font-size: 2rem;
       font-weight: 700;
       color: #2c3e50;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
-
     .stat-label {
       color: #7f8c8d;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      font-size: 0.8rem;
+      font-size: 0.9rem;
     }
 
     #toast {
@@ -276,7 +260,6 @@
       opacity: 0;
       transition: opacity 0.3s ease, bottom 0.3s ease;
     }
-
     #toast.show {
       visibility: visible;
       opacity: 1;
@@ -288,91 +271,7 @@
       font-size: 1.2em;
     }
 
-    /* --- MOBILTILPASNING --- */
-    @media (max-width: 768px) {
-      body {
-        padding: 10px;
-        font-size: 15px;
-      }
-
-      .container {
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .sidebar {
-        width: 100%;
-        position: static;
-        padding: 15px;
-        margin-bottom: 10px;
-      }
-
-      .header h1 {
-        font-size: 1.8rem;
-      }
-
-      .section {
-        padding: 20px;
-      }
-
-      .section h2 {
-        font-size: 1.4rem;
-      }
-
-      .form-group label {
-        font-size: 0.9rem;
-      }
-
-      .form-group input,
-      .form-group select,
-      .form-group textarea {
-        font-size: 1rem;
-        padding: 12px;
-      }
-
-      .btn {
-        font-size: 0.95rem;
-        padding: 10px;
-      }
-
-      .search-container {
-        gap: 10px;
-      }
-
-      #searchInput, #filterDestination {
-        max-width: 100%;
-        font-size: 1rem;
-      }
-
-      th, td {
-        padding: 10px 8px;
-        font-size: 0.9rem;
-      }
-
-      .action-buttons .btn {
-        font-size: 0.8rem;
-        padding: 5px 8px;
-      }
-
-      .stat-number {
-        font-size: 1.4rem;
-      }
-
-      .button-group {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      .button-group .btn {
-        flex: 1;
-        min-width: 45%;
-        font-size: 0.85rem;
-        padding: 10px;
-      }
-    }
-
-    /* --- UTSKRIFT --- */
+    /* --- FORBEDRET UTSKRIFT --- */
     @media print {
       body {
         background: white;
@@ -384,24 +283,32 @@
         max-width: 100%;
         box-shadow: none;
         flex-direction: column;
+        gap: 0;
       }
-      .sidebar, .button-group, .stats-container, .search-container {
+      .sidebar {
+        display: none;
+      }
+      .stats-container, .button-group {
+        display: none;
+      }
+      .search-container {
         display: none;
       }
       .section h2 {
         font-size: 1.5rem;
+        margin-bottom: 15px;
       }
       table {
         font-size: 12pt;
         border: 1px solid #000;
       }
       th, td {
-        padding: 8px;
-        border-bottom: 1px solid #000;
+        padding: 10px;
+        border-bottom: 1px solid #ccc;
       }
       th {
-        background-color: #eee;
-        color: black;
+        background-color: #f0f0f0;
+        color: #000;
         font-weight: bold;
       }
       tr:hover {
@@ -412,42 +319,35 @@
       }
       .header {
         background: white;
-        color: black;
+        color: #000;
+        border: none;
         border-bottom: 2px solid #000;
+      }
+      .header h1 {
+        color: #000;
+        font-size: 2rem;
+      }
+      .header p {
+        color: #000;
       }
       .print-footer {
         text-align: center;
         font-size: 10pt;
-        color: #333;
+        color: #555;
         margin-top: 30px;
         padding-top: 10px;
-        border-top: 1px solid #000;
+        border-top: 1px solid #ccc;
       }
     }
 
-    /* --- TILBAKE TIL TOPP KNAPP --- */
-    .back-to-top {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #2c3e50;
-      color: white;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      z-index: 999;
-    }
-
-    .back-to-top.show {
-      opacity: 1;
+    @media (max-width: 900px) {
+      .container {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        position: static;
+      }
     }
   </style>
 </head>
@@ -455,7 +355,7 @@
   <div class="container">
     <!-- Sidepanel -->
     <div class="sidebar">
-      <h1 style="font-size: 1.6rem; color: #2c3e50; text-align: center; margin-bottom: 15px;">🚛 Registrer Avgang</h1>
+      <h1 style="font-size: 1.8rem; color: #2c3e50; text-align: center; margin-bottom: 20px;">🚛 Registrer Avgang</h1>
       <form id="departureForm">
         <div class="form-group">
           <label for="unitNumber">Enhetsnummer *</label>
@@ -547,25 +447,27 @@
             <tbody></tbody>
           </table>
         </div>
+      
       </section>
-
+    
       <!-- Systemhandlinger -->
       <section class="section">
         <h2><span class="icon">⚙️</span> Systemhandlinger</h2>
         <div class="button-group">
-          <button class="btn btn-danger" onclick="clearAllDepartures()">🗑️ Tøm alle</button>
+          <button class="btn btn-danger" onclick="clearAllDepartures()">🗑️ Tøm alle avganger</button>
           <button class="btn btn-secondary" onclick="window.print()">🖨️ Skriv ut</button>
-          <button class="btn btn-success" onclick="exportToCSV()">📄 CSV</button>
-          <button class="btn btn-primary" onclick="backupData()">💾 Backup</button>
-          <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📂 Last opp</button>
-          <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importFromJSON(this)">
+          <button class="btn btn-success" onclick="exportToCSV()">📄 Eksporter til CSV</button>
+          <button class="btn btn-primary" onclick="backupData()">💾 Last ned backup (JSON)</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📂 Last opp backup (JSON)</button>
+          <input type="file"
+                id="importFile"
+                accept=".json"
+                style="display: none;"
+                onchange="importFromJSON(this)">
         </div>
       </section>
     </div>
   </div>
-
-  <!-- Tilbake til topp -->
-  <div class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">🔝</div>
 
   <div id="toast"></div>
 
@@ -575,12 +477,12 @@
     const filterDestination = document.getElementById('filterDestination');
     const tableBody = document.querySelector('#departuresTable tbody');
     const toast = document.getElementById('toast');
-    const backToTop = document.querySelector('.back-to-top');
 
     let departures = JSON.parse(localStorage.getItem('departures')) || [];
     let editingIndex = null;
     let currentSort = { key: null, asc: true };
 
+    // Type-ikoner
     const typeIcons = {
       Tog: '🚂',
       Bil: '🚗',
@@ -636,12 +538,13 @@
             <td><span style="color:${sc};font-weight:bold">${d.status}</span></td>
             <td>${d.comment || '<em>Ingen</em>'}</td>
             <td class="action-buttons">
-              <button class="btn btn-secondary" onclick="editDeparture(${d.id})">✏️</button>
-              <button class="btn btn-danger" onclick="deleteDeparture(${d.id})">🗑️</button>
+              <button class="btn btn-secondary" onclick="editDeparture(${d.id})">✏️ Rediger</button>
+              <button class="btn btn-danger" onclick="deleteDeparture(${d.id})">🗑️ Slett</button>
             </td>
           </tr>`;
       }).join('');
 
+      // Oppdater sorteringsindikatorer
       document.querySelectorAll('th[data-sort]').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
         if (th.dataset.sort === currentSort.key) th.classList.add(currentSort.asc ? 'sort-asc' : 'sort-desc');
@@ -708,7 +611,7 @@
       });
       editingIndex = idx;
       form.querySelector('button[type="submit"]').textContent = '🔁 Oppdater';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
     };
 
     window.deleteDeparture = (id) => {
@@ -757,19 +660,27 @@
       a.click();
       URL.revokeObjectURL(url);
     }
-
+    
     function importFromJSON(input) {
       const file = input.files[0];
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = function(e) {
         try {
           const imported = JSON.parse(e.target.result);
+
+          // Valider at det er en array med gyldige avganger
           if (Array.isArray(imported) && imported.every(d => d.id && d.unitNumber && d.destination)) {
-            const overwrite = confirm(`Fant ${imported.length} avganger. OK for å ERSTATTE, Avbryt for å LEGGE TIL.`);
+            // Spør om brukeren vil erstatte eller flette sammen
+            const overwrite = confirm(
+              `Fant ${imported.length} avganger i filen.\n\nTrykk 'OK' for å ERSTATTE alle eksisterende avganger.\nTrykk 'Avbryt' for å LEGGE TIL sammen med eksisterende.`
+            );
+
             if (overwrite) {
               departures = imported;
             } else {
+              // Flett sammen – unngå duplikater basert på enhetsnummer (eller id)
               const existingIds = new Set(departures.map(d => d.id));
               let importedCount = 0;
               imported.forEach(d => {
@@ -780,6 +691,7 @@
               });
               showToast(`Lagt til ${importedCount} nye avganger.`, 'info');
             }
+
             localStorage.setItem('departures', JSON.stringify(departures));
             displayDepartures();
             showToast('Data importert!', 'success');
@@ -792,13 +704,8 @@
         }
       };
       reader.readAsText(file);
-      input.value = '';
+      input.value = ''; // Reset input
     }
-
-    // --- Tilbake til topp visning ---
-    window.addEventListener('scroll', () => {
-      backToTop.classList.toggle('show', window.scrollY > 300);
-    });
 
     // --- Init ---
     displayDepartures();
