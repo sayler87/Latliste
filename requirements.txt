@@ -1,5 +1,8 @@
-fastapi
-uvicorn
+pandas
+xlsxwriter
 streamlit
-python-multipart
-aiofiles
+reportlab
+streamlit-autorefresh
+plotly
+
+
