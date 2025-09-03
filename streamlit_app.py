@@ -37,3 +37,20 @@ if html_content:
     st.components.v1.html(html_content, height=1000, scrolling=True)
 else:
     st.stop()
+
+@st.cache_data(show_spinner=False, ttl=2)
+def count_summary(day: str):
+    ...
+
+@st.cache_data(show_spinner=False, ttl=2)
+def get_rows(day: str, where_sql: str, where_args: tuple, order_sql: str):
+    ...
+
+@st.cache_data(show_spinner=False, ttl=2)
+def export_day(day: str):
+    ...
+
+def invalidate_caches():
+    count_summary.clear()
+    get_rows.clear()
+    export_day.clear()
