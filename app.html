@@ -576,7 +576,7 @@
   <div class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">🔝</div>
 
   <div id="toast"></div>
-<script>
+   <script>
   // --- Konfig: GitHub-URL til datafilen ---
   const DATA_URL = 'https://raw.githubusercontent.com/sayler87/Latliste/main/data.json';
   const DATA_UPDATE_INTERVAL = 5000; // Oppdater hver 5. sekund
@@ -584,7 +584,6 @@
   // --- Variabler ---
   let departures = JSON.parse(localStorage.getItem('departures')) || [];
   let editingIndex = null;
-  
 
   const form = document.getElementById('departureForm');
   const searchInput = document.getElementById('searchInput');
@@ -603,28 +602,30 @@
   let currentSort = { key: null, asc: true };
 
   // --- Hent data fra GitHub ---
-  function displayDepartures() {
-  const tbody = document.querySelector('#departuresTable tbody');
-  tbody.innerHTML = departures.map(d => `
-    <tr>
-      <td>${d.unitNumber}</td>
-      <td>${d.destination}</td>
-      <td>${d.time}</td>
-      <td>${d.gate}</td>
-      <td>${d.type}</td>
-      <td>${d.status}</td>
-      <td>${d.comment || '<em>Ingen</em>'}</td>
-      <td><button onclick="deleteDeparture(${d.id})">🗑️</button></td>
-    </tr>
-  `).join('');
-}
+  async function loadData() {
+    try {
+      const response = await fetch(DATA_URL + '?t=' + new Date().getTime()); // Cache-bust
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          departures = data;
+          localStorage.setItem('departures', JSON.stringify(departures)); // Synk lokalt
+        }
+      } else {
+        console.warn('Ekstern data ikke tilgjengelig, bruker localStorage');
+      }
+    } catch (err) {
+      console.error('Feil ved henting fra GitHub:', err);
+    }
+    displayDepartures();
+  }
 
-  // --- Lagre data til GitHub (via GitHub Actions eller manuelt) ---
-  async function saveData(newDepartures) {
+  // --- Lagre data lokalt og vis info ---
+  function saveData(newDepartures) {
     departures = newDepartures;
+    localStorage.setItem('departures', JSON.stringify(departures));
     displayDepartures();
     showToast('Data lagret lokalt – last opp data.json til GitHub for å dele', 'info');
-    // ⚠️ Viktig: Du må manuelt laste opp data.json til GitHub, eller bruke GitHub Actions/API
   }
 
   // --- Sett dagens tid ---
@@ -698,29 +699,18 @@
   });
 
   // --- Skjema ---
-  form.addEventListener('submit', async e => {
+  form.addEventListener('submit', e => {
     e.preventDefault();
     const data = {
-  id: Date.now(),
-  unitNumber: document.getElementById('unitNumber').value.trim().toUpperCase(),
-  destination: document.getElementById('destination').value,
-  time: document.getElementById('time').value,
-  gate: document.getElementById('gate').value.trim(),
-  type: document.getElementById('type').value,
-  status: document.getElementById('status').value,
-  comment: document.getElementById('comment').value.trim() || null
-};
-// Legg til i arrayen
-     departures.push(data);
-      // Lagre og oppdater
-    localStorage.setItem('departures', JSON.stringify(departures));
-    displayDepartures(); // 🔥 Viktig: Oppdater tabellen
-
-    // Tilbakestill skjema
-    form.reset();
-    showToast('Avgang registrert!');
-
-
+      id: editingIndex !== null ? departures[editingIndex].id : Date.now(),
+      unitNumber: document.getElementById('unitNumber').value.trim().toUpperCase(),
+      destination: document.getElementById('destination').value,
+      time: document.getElementById('time').value,
+      gate: document.getElementById('gate').value.trim(),
+      type: document.getElementById('type').value,
+      status: document.getElementById('status').value,
+      comment: document.getElementById('comment').value.trim() || null
+    };
 
     if (Object.values(data).some(v => v === '' && v !== null)) {
       showToast('Vennligst fyll ut alle obligatoriske felt.', 'info');
@@ -742,7 +732,7 @@
       showToast('Registrert!', 'success');
     }
 
-    await saveData(departures);
+    saveData(departures);
     form.reset();
     document.getElementById('time').value = new Date().toTimeString().slice(0, 5);
   });
@@ -775,7 +765,8 @@
     }
     if (confirm('Slette ALLE avganger?')) {
       departures = [];
-      saveData(departures);
+      localStorage.removeItem('departures');
+      displayDepartures();
       showToast('Alt tømt!', 'delete');
     }
   };
@@ -818,11 +809,14 @@
             departures = imported;
           } else {
             const existingIds = new Set(departures.map(d => d.id));
+            let importedCount = 0;
             imported.forEach(d => {
               if (!existingIds.has(d.id)) {
                 departures.push(d);
+                importedCount++;
               }
             });
+            showToast(`Lagt til ${importedCount} nye avganger.`, 'info');
           }
           saveData(departures);
           showToast('Data importert!', 'success');
@@ -838,7 +832,7 @@
     input.value = '';
   }
 
-  // --- Automatisk oppdatering (polling) ---
+  // --- Automatisk oppdatering ---
   setInterval(loadData, DATA_UPDATE_INTERVAL);
 
   // --- Tilbake til topp ---
@@ -847,7 +841,7 @@
   });
 
   // --- Init ---
-  loadData();
+  loadData(); // Hent data ved oppstart
   searchInput.addEventListener('input', displayDepartures);
   filterDestination.addEventListener('change', displayDepartures);
 </script>
