@@ -1,12 +1,1 @@
-[
-  {
-    "id": 1712345678,
-    "unitNumber": "TOG001",
-    "destination": "TRONDHEIM",
-    "time": "10:30",
-    "gate": "A1",
-    "type": "Tog",
-    "status": "LEVERT",
-    "comment": "Ferdig lastet"
-  }
-]
+[]
