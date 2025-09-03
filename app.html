@@ -578,282 +578,315 @@
   <div id="toast"></div>
 
   <script>
-    // --- Konfig: GitHub-URL til datafilen ---
-    const DATA_URL = 'https://raw.githubusercontent.com/sayler87/Latliste/main/data.json';
-    const DATA_UPDATE_INTERVAL = 5000; // Oppdater hver 5. sekund
+  // --- Konfig ---
+  const DATA_URL = 'https://raw.githubusercontent.com/sayler87/Latliste/main/data.json';
+  const REPO_OWNER = 'sayler87';
+  const REPO_NAME = 'Latliste';
+  const FILE_PATH = 'data.json';
+  const TOKEN = 'din-personal-access-token-her'; // 👈 BYTT DENNE UT!
+  const UPDATE_INTERVAL = 5000;
 
-    // --- Variabler ---
-    let departures = JSON.parse(localStorage.getItem('departures')) || [];
-    let editingIndex = null;
+  // --- Variabler ---
+  let departures = JSON.parse(localStorage.getItem('departures')) || [];
+  let editingIndex = null;
 
-    // --- DOM-referanser ---
-    const form = document.getElementById('departureForm');
-    const searchInput = document.getElementById('searchInput');
-    const filterDestination = document.getElementById('filterDestination');
-    const tableBody = document.querySelector('#departuresTable tbody');
-    const toast = document.getElementById('toast');
-    const backToTop = document.querySelector('.back-to-top');
+  // --- DOM-referanser ---
+  const form = document.getElementById('departureForm');
+  const searchInput = document.getElementById('searchInput');
+  const filterDestination = document.getElementById('filterDestination');
+  const tableBody = document.querySelector('#departuresTable tbody');
+  const toast = document.getElementById('toast');
+  const backToTop = document.querySelector('.back-to-top');
 
-    // --- Type-ikoner ---
-    const typeIcons = {
-      Tog: '🚂',
-      Bil: '🚗',
-      Tralle: '🛒',
-      Modul: '📦'
-    };
+  // --- Type-ikoner ---
+  const typeIcons = {
+    Tog: '🚂',
+    Bil: '🚗',
+    Tralle: '🛒',
+    Modul: '📦'
+  };
 
-    // --- Sortering ---
-    let currentSort = { key: null, asc: true };
+  let currentSort = { key: null, asc: true };
 
-    // --- Hent data fra GitHub ---
-    async function loadData() {
-      try {
-        const response = await fetch(DATA_URL + '?t=' + new Date().getTime());
-        if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data)) {
-            departures = data;
-            localStorage.setItem('departures', JSON.stringify(departures));
-          }
-        } else {
-          console.warn('Ekstern data ikke tilgjengelig, bruker localStorage');
-          departures = JSON.parse(localStorage.getItem('departures')) || [];
+  // --- Hent data fra GitHub ---
+  async function loadData() {
+    try {
+      const response = await fetch(DATA_URL + '?t=' + new Date().getTime());
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          departures = data;
+          localStorage.setItem('departures', JSON.stringify(departures));
         }
-      } catch (err) {
-        console.error('Feil ved henting fra GitHub:', err);
+      } else {
+        console.warn('Ekstern data ikke tilgjengelig, bruker localStorage');
         departures = JSON.parse(localStorage.getItem('departures')) || [];
       }
-      displayDepartures();
+    } catch (err) {
+      console.error('Feil ved henting:', err);
+      departures = JSON.parse(localStorage.getItem('departures')) || [];
     }
+    displayDepartures();
+  }
 
-    // --- Lagre data lokalt ---
-    function saveData() {
-      localStorage.setItem('departures', JSON.stringify(departures));
-      displayDepartures();
-      showToast('Data lagret lokalt – last opp data.json til GitHub for å dele', 'info');
-    }
+  // --- Last opp til GitHub ---
+  async function uploadToGitHub(data) {
+    try {
+      // Hent SHA for eksisterende fil
+      const getRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`);
+      const json = await getRes.json();
+      const sha = json.sha;
 
-    // --- Sett dagens tid ---
-    document.getElementById('time').value = new Date().toTimeString().slice(0, 5);
+      // Encode til base64
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
 
-    // --- Store bokstaver ---
-    document.getElementById('unitNumber').addEventListener('input', e => {
-      e.target.value = e.target.value.toUpperCase();
-    });
-
-    // --- Toast-melding ---
-    function showToast(message, type = 'info') {
-      const colors = { success: '#27ae60', error: '#e74c3c', info: '#3498db', delete: '#e74c3c', edit: '#f39c12' };
-      toast.textContent = message;
-      toast.style.backgroundColor = colors[type] || '#333';
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3000);
-    }
-
-    // --- Oppdater tabell med søk og sortering ---
-    function displayDepartures() {
-      const term = searchInput.value.toLowerCase();
-      const dest = filterDestination.value;
-      let filtered = departures.filter(d =>
-        (term === '' || d.unitNumber.toLowerCase().includes(term) || d.destination.toLowerCase().includes(term)) &&
-        (dest === '' || d.destination === dest)
-      );
-
-      if (currentSort.key) {
-        filtered.sort((a, b) => {
-          let av = a[currentSort.key] || '', bv = b[currentSort.key] || '';
-          if (currentSort.key === 'time') av = av.replace(':', ''), bv = bv.replace(':', '');
-          const res = av < bv ? -1 : av > bv ? 1 : 0;
-          return currentSort.asc ? res : -res;
-        });
-      }
-
-      tableBody.innerHTML = filtered.map(d => {
-        const tc = d.type === 'Tog' ? '#e74c3c' : d.type === 'Bil' ? '#f312e8' : d.type === 'Tralle' ? '#3498db' : '#9b59b6';
-        const sc = d.status === 'LEVERT' ? '#27ae60' : d.status === 'LAGER' ? '#3498db' : '#f39c12';
-        return `
-          <tr>
-            <td>${d.unitNumber}</td>
-            <td>${d.destination}</td>
-            <td>${d.time}</td>
-            <td>${d.gate}</td>
-            <td><span class="type-icon">${typeIcons[d.type]}</span><span style="color:${tc};font-weight:bold">${d.type}</span></td>
-            <td><span style="color:${sc};font-weight:bold">${d.status}</span></td>
-            <td>${d.comment || '<em>Ingen</em>'}</td>
-            <td class="action-buttons">
-              <button class="btn btn-secondary" onclick="editDeparture(${d.id})">✏️</button>
-              <button class="btn btn-danger" onclick="deleteDeparture(${d.id})">🗑️</button>
-            </td>
-          </tr>`;
-      }).join('');
-
-      document.querySelectorAll('th[data-sort]').forEach(th => {
-        th.classList.remove('sort-asc', 'sort-desc');
-        if (th.dataset.sort === currentSort.key) th.classList.add(currentSort.asc ? 'sort-asc' : 'sort-desc');
+      // Last opp
+      const putRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: `🤖 Oppdatert avganger: ${new Date().toISOString()}`,
+          content: encoded,
+          sha: sha
+        })
       });
-    }
 
-    // --- Sortering via klikk ---
-    document.querySelectorAll('th[data-sort]').forEach(th => {
-      th.addEventListener('click', () => {
-        const key = th.dataset.sort;
-        currentSort.asc = currentSort.key === key ? !currentSort.asc : true;
-        currentSort.key = key;
-        displayDepartures();
-      });
-    });
-
-    // --- Skjema: Registrer eller oppdater ---
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const data = {
-        id: editingIndex !== null ? departures[editingIndex].id : Date.now(),
-        unitNumber: document.getElementById('unitNumber').value.trim().toUpperCase(),
-        destination: document.getElementById('destination').value,
-        time: document.getElementById('time').value,
-        gate: document.getElementById('gate').value.trim(),
-        type: document.getElementById('type').value,
-        status: document.getElementById('status').value,
-        comment: document.getElementById('comment').value.trim() || null
-      };
-
-      if (Object.values(data).some(v => v === '' && v !== null)) {
-        showToast('Vennligst fyll ut alle obligatoriske felt.', 'info');
-        return;
-      }
-
-      if (editingIndex === null && departures.some(d => d.unitNumber === data.unitNumber)) {
-        showToast(`Enhetsnummer ${data.unitNumber} eksisterer allerede!`, 'info');
-        return;
-      }
-
-      if (editingIndex !== null) {
-        departures[editingIndex] = data;
-        editingIndex = null;
-        form.querySelector('button[type="submit"]').textContent = '✅ Registrer Avgang';
-        showToast('Oppdatert!', 'edit');
+      const result = await putRes.json();
+      if (putRes.ok) {
+        showToast('✅ Data synkronisert med GitHub', 'success');
       } else {
-        departures.push(data);
-        showToast('Registrert!', 'success');
+        console.error('GitHub feil:', result);
+        showToast('⚠️ Lagring til GitHub feilet', 'error');
       }
+    } catch (err) {
+      console.error('Upload-feil:', err);
+      showToast('⚠️ Kan ikke koble til GitHub', 'error');
+    }
+  }
 
-      saveData();
-      form.reset();
-      document.getElementById('time').value = new Date().toTimeString().slice(0, 5);
-    });
+  // --- Lagre lokalt og til GitHub ---
+  async function saveData() {
+    localStorage.setItem('departures', JSON.stringify(departures));
+    displayDepartures();
+    await uploadToGitHub(departures); // Automatisk opplasting
+  }
 
-    // --- Rediger ---
-    window.editDeparture = (id) => {
-      const idx = departures.findIndex(d => d.id === id);
-      if (idx === -1) return;
-      const d = departures[idx];
-      Object.keys(d).forEach(k => {
-        if (document.getElementById(k)) document.getElementById(k).value = d[k];
+  // --- Sett tid ---
+  document.getElementById('time').value = new Date().toTimeString().slice(0, 5);
+
+  // --- Store bokstaver ---
+  document.getElementById('unitNumber').addEventListener('input', e => {
+    e.target.value = e.target.value.toUpperCase();
+  });
+
+  // --- Toast ---
+  function showToast(message, type = 'info') {
+    const colors = { success: '#27ae60', error: '#e74c3c', info: '#3498db', delete: '#e74c3c', edit: '#f39c12' };
+    toast.textContent = message;
+    toast.style.backgroundColor = colors[type] || '#333';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+
+  // --- Vis tabell ---
+  function displayDepartures() {
+    const term = searchInput.value.toLowerCase();
+    const dest = filterDestination.value;
+    let filtered = departures.filter(d =>
+      (term === '' || d.unitNumber.toLowerCase().includes(term) || d.destination.toLowerCase().includes(term)) &&
+      (dest === '' || d.destination === dest)
+    );
+
+    if (currentSort.key) {
+      filtered.sort((a, b) => {
+        let av = a[currentSort.key] || '', bv = b[currentSort.key] || '';
+        if (currentSort.key === 'time') av = av.replace(':', ''), bv = bv.replace(':', '');
+        const res = av < bv ? -1 : av > bv ? 1 : 0;
+        return currentSort.asc ? res : -res;
       });
-      editingIndex = idx;
-      form.querySelector('button[type="submit"]').textContent = '🔁 Oppdater';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    // --- Slett ---
-    window.deleteDeparture = (id) => {
-      if (confirm('Slette denne avgangen?')) {
-        departures = departures.filter(d => d.id !== id);
-        saveData();
-        showToast('Slettet!', 'delete');
-      }
-    };
-
-    // --- Tøm alle ---
-    window.clearAllDepartures = () => {
-      if (departures.length === 0) {
-        showToast('Ingen avganger å slette.', 'info');
-        return;
-      }
-      if (confirm('Slette ALLE avganger?')) {
-        departures = [];
-        localStorage.removeItem('departures');
-        displayDepartures();
-        showToast('Alt tømt!', 'delete');
-      }
-    };
-
-    // --- Eksporter til CSV ---
-    function exportToCSV() {
-      const headers = ['Enhetsnummer','Destinasjon','Tid','Luke','Type','Status','Kommentar'];
-      const rows = departures.map(d => [
-        d.unitNumber, d.destination, d.time, d.gate, d.type, d.status, d.comment || ''
-      ].map(s => `"${s}"`).join(','));
-      downloadFile([headers.join(','), ...rows].join('\n'), `avganger_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv');
-      showToast('Eksportert til CSV!', 'success');
     }
 
-    // --- Backup til JSON ---
-    function backupData() {
-      downloadFile(JSON.stringify(departures, null, 2), `data.json`, 'application/json');
-      showToast('Lagret data.json – last den opp til GitHub!', 'info');
-    }
+    tableBody.innerHTML = filtered.map(d => {
+      const tc = d.type === 'Tog' ? '#e74c3c' : d.type === 'Bil' ? '#f312e8' : d.type === 'Tralle' ? '#3498db' : '#9b59b6';
+      const sc = d.status === 'LEVERT' ? '#27ae60' : d.status === 'LAGER' ? '#3498db' : '#f39c12';
+      return `
+        <tr>
+          <td>${d.unitNumber}</td>
+          <td>${d.destination}</td>
+          <td>${d.time}</td>
+          <td>${d.gate}</td>
+          <td><span class="type-icon">${typeIcons[d.type]}</span><span style="color:${tc};font-weight:bold">${d.type}</span></td>
+          <td><span style="color:${sc};font-weight:bold">${d.status}</span></td>
+          <td>${d.comment || '<em>Ingen</em>'}</td>
+          <td class="action-buttons">
+            <button class="btn btn-secondary" onclick="editDeparture(${d.id})">✏️</button>
+            <button class="btn btn-danger" onclick="deleteDeparture(${d.id})">🗑️</button>
+          </td>
+        </tr>`;
+    }).join('');
 
-    // --- Last ned fil ---
-    function downloadFile(content, filename, type) {
-      const blob = new Blob([content], { type });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    // --- Importer fra JSON ---
-    function importFromJSON(input) {
-      const file = input.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const imported = JSON.parse(e.target.result);
-          if (Array.isArray(imported) && imported.every(d => d.id && d.unitNumber && d.destination)) {
-            const overwrite = confirm(`Fant ${imported.length} avganger. OK for å ERSTATTE, Avbryt for å LEGGE TIL.`);
-            if (overwrite) {
-              departures = imported;
-            } else {
-              const existingIds = new Set(departures.map(d => d.id));
-              let importedCount = 0;
-              imported.forEach(d => {
-                if (!existingIds.has(d.id)) {
-                  departures.push(d);
-                  importedCount++;
-                }
-              });
-              showToast(`Lagt til ${importedCount} nye avganger.`, 'info');
-            }
-            saveData();
-            showToast('Data importert!', 'success');
-          } else {
-            throw new Error('Ugyldig format');
-          }
-        } catch (err) {
-          showToast('Feil ved lesing av JSON-fil!', 'error');
-          console.error(err);
-        }
-      };
-      reader.readAsText(file);
-      input.value = '';
-    }
-
-    // --- Automatisk oppdatering fra GitHub ---
-    setInterval(loadData, DATA_UPDATE_INTERVAL);
-
-    // --- Tilbake til topp-knapp ---
-    window.addEventListener('scroll', () => {
-      backToTop.classList.toggle('show', window.scrollY > 300);
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+      th.classList.remove('sort-asc', 'sort-desc');
+      if (th.dataset.sort === currentSort.key) th.classList.add(currentSort.asc ? 'sort-asc' : 'sort-desc');
     });
+  }
 
-    // --- Init ---
-    loadData();
-    searchInput.addEventListener('input', displayDepartures);
-    filterDestination.addEventListener('change', displayDepartures);
-  </script>
+  // --- Sortering ---
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sort;
+      currentSort.asc = currentSort.key === key ? !currentSort.asc : true;
+      currentSort.key = key;
+      displayDepartures();
+    });
+  });
+
+  // --- Skjema ---
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = {
+      id: editingIndex !== null ? departures[editingIndex].id : Date.now(),
+      unitNumber: document.getElementById('unitNumber').value.trim().toUpperCase(),
+      destination: document.getElementById('destination').value,
+      time: document.getElementById('time').value,
+      gate: document.getElementById('gate').value.trim(),
+      type: document.getElementById('type').value,
+      status: document.getElementById('status').value,
+      comment: document.getElementById('comment').value.trim() || null
+    };
+
+    if (Object.values(data).some(v => v === '' && v !== null)) {
+      showToast('Vennligst fyll ut alle obligatoriske felt.', 'info');
+      return;
+    }
+
+    if (editingIndex === null && departures.some(d => d.unitNumber === data.unitNumber)) {
+      showToast(`Enhetsnummer ${data.unitNumber} eksisterer allerede!`, 'info');
+      return;
+    }
+
+    if (editingIndex !== null) {
+      departures[editingIndex] = data;
+      editingIndex = null;
+      form.querySelector('button[type="submit"]').textContent = '✅ Registrer Avgang';
+      showToast('Oppdatert!', 'edit');
+    } else {
+      departures.push(data);
+      showToast('Registrert!', 'success');
+    }
+
+    await saveData(); // Lagrer lokalt + laster opp til GitHub
+    form.reset();
+    document.getElementById('time').value = new Date().toTimeString().slice(0, 5);
+  });
+
+  // --- Rediger/slett ---
+  window.editDeparture = (id) => {
+    const idx = departures.findIndex(d => d.id === id);
+    if (idx === -1) return;
+    const d = departures[idx];
+    Object.keys(d).forEach(k => {
+      if (document.getElementById(k)) document.getElementById(k).value = d[k];
+    });
+    editingIndex = idx;
+    form.querySelector('button[type="submit"]').textContent = '🔁 Oppdater';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  window.deleteDeparture = async (id) => {
+    if (confirm('Slette denne avgangen?')) {
+      departures = departures.filter(d => d.id !== id);
+      await saveData();
+      showToast('Slettet!', 'delete');
+    }
+  };
+
+  window.clearAllDepartures = async () => {
+    if (departures.length === 0) {
+      showToast('Ingen avganger å slette.', 'info');
+      return;
+    }
+    if (confirm('Slette ALLE avganger?')) {
+      departures = [];
+      localStorage.removeItem('departures');
+      await saveData();
+      showToast('Alt tømt!', 'delete');
+    }
+  };
+
+  // --- Eksport ---
+  function exportToCSV() {
+    const headers = ['Enhetsnummer','Destinasjon','Tid','Luke','Type','Status','Kommentar'];
+    const rows = departures.map(d => [
+      d.unitNumber, d.destination, d.time, d.gate, d.type, d.status, d.comment || ''
+    ].map(s => `"${s}"`).join(','));
+    downloadFile([headers.join(','), ...rows].join('\n'), `avganger_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv');
+    showToast('Eksportert til CSV!', 'success');
+  }
+
+  function backupData() {
+    downloadFile(JSON.stringify(departures, null, 2), `data.json`, 'application/json');
+    showToast('Backup lagret lokalt', 'info');
+  }
+
+  function downloadFile(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importFromJSON(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      try {
+        const imported = JSON.parse(e.target.result);
+        if (Array.isArray(imported) && imported.every(d => d.id && d.unitNumber && d.destination)) {
+          const overwrite = confirm(`Fant ${imported.length} avganger. OK for å ERSTATTE, Avbryt for å LEGGE TIL.`);
+          if (overwrite) {
+            departures = imported;
+          } else {
+            const existingIds = new Set(departures.map(d => d.id));
+            imported.forEach(d => {
+              if (!existingIds.has(d.id)) {
+                departures.push(d);
+              }
+            });
+          }
+          await saveData();
+          showToast('Data importert!', 'success');
+        } else {
+          throw new Error('Ugyldig format');
+        }
+      } catch (err) {
+        showToast('Feil ved lesing av JSON-fil!', 'error');
+        console.error(err);
+      }
+    };
+    reader.readAsText(file);
+    input.value = '';
+  }
+
+  // --- Automatisk oppdatering ---
+  setInterval(loadData, UPDATE_INTERVAL);
+
+  // --- Tilbake til topp ---
+  window.addEventListener('scroll', () => {
+    backToTop.classList.toggle('show', window.scrollY > 300);
+  });
+
+  // --- Init ---
+  loadData();
+  searchInput.addEventListener('input', displayDepartures);
+  filterDestination.addEventListener('change', displayDepartures);
+</script>
 </body>
 </html>
