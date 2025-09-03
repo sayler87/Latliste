@@ -711,7 +711,16 @@
   comment: document.getElementById('comment').value.trim() || null
 };
 // Legg til i arrayen
-departures.push(data);
+     departures.push(data);
+      // Lagre og oppdater
+    localStorage.setItem('departures', JSON.stringify(departures));
+    displayDepartures(); // 🔥 Viktig: Oppdater tabellen
+
+    // Tilbakestill skjema
+    form.reset();
+    showToast('Avgang registrert!');
+
+
 
     if (Object.values(data).some(v => v === '' && v !== null)) {
       showToast('Vennligst fyll ut alle obligatoriske felt.', 'info');
