@@ -582,8 +582,9 @@
   const DATA_UPDATE_INTERVAL = 5000; // Oppdater hver 5. sekund
 
   // --- Variabler ---
-  let departures = [];
+  let departures = JSON.parse(localStorage.getItem('departures')) || [];
   let editingIndex = null;
+  
 
   const form = document.getElementById('departureForm');
   const searchInput = document.getElementById('searchInput');
@@ -602,21 +603,21 @@
   let currentSort = { key: null, asc: true };
 
   // --- Hent data fra GitHub ---
-  async function loadData() {
-    try {
-      const response = await fetch(DATA_URL + '?t=' + new Date().getTime()); // Cache-bust
-      if (response.ok) {
-        const data = await response.json();
-        departures = Array.isArray(data) ? data : [];
-        displayDepartures();
-      } else {
-        showToast('Ingen data funnet', 'info');
-      }
-    } catch (err) {
-      console.error('Feil ved lasting:', err);
-      showToast('Kunne ikke hente data', 'error');
-    }
-  }
+  function displayDepartures() {
+  const tbody = document.querySelector('#departuresTable tbody');
+  tbody.innerHTML = departures.map(d => `
+    <tr>
+      <td>${d.unitNumber}</td>
+      <td>${d.destination}</td>
+      <td>${d.time}</td>
+      <td>${d.gate}</td>
+      <td>${d.type}</td>
+      <td>${d.status}</td>
+      <td>${d.comment || '<em>Ingen</em>'}</td>
+      <td><button onclick="deleteDeparture(${d.id})">🗑️</button></td>
+    </tr>
+  `).join('');
+}
 
   // --- Lagre data til GitHub (via GitHub Actions eller manuelt) ---
   async function saveData(newDepartures) {
@@ -700,15 +701,17 @@
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const data = {
-      id: editingIndex !== null ? departures[editingIndex].id : Date.now(),
-      unitNumber: document.getElementById('unitNumber').value.trim().toUpperCase(),
-      destination: document.getElementById('destination').value,
-      time: document.getElementById('time').value,
-      gate: document.getElementById('gate').value.trim(),
-      type: document.getElementById('type').value,
-      status: document.getElementById('status').value,
-      comment: document.getElementById('comment').value.trim() || null
-    };
+  id: Date.now(),
+  unitNumber: document.getElementById('unitNumber').value.trim().toUpperCase(),
+  destination: document.getElementById('destination').value,
+  time: document.getElementById('time').value,
+  gate: document.getElementById('gate').value.trim(),
+  type: document.getElementById('type').value,
+  status: document.getElementById('status').value,
+  comment: document.getElementById('comment').value.trim() || null
+};
+// Legg til i arrayen
+departures.push(data);
 
     if (Object.values(data).some(v => v === '' && v !== null)) {
       showToast('Vennligst fyll ut alle obligatoriske felt.', 'info');
