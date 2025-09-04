@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🚛 Registrer Avganger - Transportsystem</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
+      display: flex;
+      gap: 20px;
+    }
+    .sidebar {
+      width: 320px;
+      background: oklch(100% 0.00011 271.152);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+      height: fit-content;
+      position: sticky;
+      top: 20px;
+    }
+    .main-content {
+      flex: 1;
+    }
+    .header {
+      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+      border-radius: 15px 15px 0 0;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      font-weight: 300;
+    }
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+    .section {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 30px;
+      border-left: 5px solid #3498db;
+      margin-bottom: 30px;
+    }
+    .section h2 {
+      color: #2c3e50;
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #2c3e50;
+      font-size: 0.95rem;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 12px 15px;
+      border: 2px solid #e0e6ed;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: white;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .btn {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      width: 100%;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: white;
+    }
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+    }
+    .btn-secondary {
+      background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+      color: white;
+    }
+    .btn-secondary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+    }
+    .btn-success {
+      background: linear-gradient(135deg, #27ae60, #229954);
+      color: white;
+    }
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+    }
+
+    .search-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    #searchInput, #filterDestination {
+      padding: 12px 16px;
+      width: 100%;
+      max-width: 300px;
+      border: 2px solid #3498db;
+      border-radius: 8px;
+      font-size: 1rem;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      margin-top: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+    th {
+      background: linear-gradient(135deg, #34495e, #2c3e50);
+      color: white;
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      position: relative;
+    }
+    th::after {
+      content: "";
+      position: absolute;
+      right: 8px;
+      opacity: 0.3;
+      font-size: 12px;
+    }
+    th.sort-asc::after { content: "↑"; opacity: 1; }
+    th.sort-desc::after { content: "↓"; opacity: 1; }
+    td {
+      padding: 15px;
+      border-bottom: 1px solid #ecf0f1;
+      font-size: 0.95rem;
+    }
+    tr:hover {
+      background: #f8f9fa;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    .action-buttons .btn {
+      padding: 6px 12px;
+      font-size: 0.85rem;
+    }
+
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      border-top: 4px solid #3498db;
+    }
+    .stat-card.type-tog { border-top-color: #090deb; }
+    .stat-card.type-bil { border-top-color: #f312e8; }
+    .stat-card.type-tralle { border-top-color: #3498db; }
+    .stat-card.type-modul { border-top-color: #9b59b6; }
+    .stat-card.dest { border-top-color: #16a085; }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+    .stat-label {
+      color: #7f8c8d;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.9rem;
+    }
+
+    #toast {
+      visibility: hidden;
+      min-width: 300px;
+      margin-left: -150px;
+      background: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 8px;
+      padding: 16px;
+      position: fixed;
+      z-index: 1000;
+      left: 50%;
+      bottom: 30px;
+      font-size: 1rem;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      opacity: 0;
+      transition: opacity 0.3s ease, bottom 0.3s ease;
+    }
+    #toast.show {
+      visibility: visible;
+      opacity: 1;
+      bottom: 50px;
+    }
+
+    .type-icon {
+      margin-right: 6px;
+      font-size: 1.2em;
+    }
+
+    /* --- FORBEDRET UTSKRIFT --- */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        color: black;
+        font-size: 12pt;
+      }
+      .container {
+        max-width: 100%;
+        box-shadow: none;
+        flex-direction: column;
+        gap: 0;
+      }
+      .sidebar {
+        display: none;
+      }
+      .stats-container, .button-group {
+        display: none;
+      }
+      .search-container {
+        display: none;
+      }
+      .section h2 {
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+      }
+      table {
+        font-size: 12pt;
+        border: 1px solid #000;
+      }
+      th, td {
+        padding: 10px;
+        border-bottom: 1px solid #ccc;
+      }
+      th {
+        background-color: #f0f0f0;
+        color: #000;
+        font-weight: bold;
+      }
+      tr:hover {
+        background: none;
+      }
+      .action-buttons {
+        display: none;
+      }
+      .header {
+        background: white;
+        color: #000;
+        border: none;
+        border-bottom: 2px solid #000;
+      }
+      .header h1 {
+        color: #000;
+        font-size: 2rem;
+      }
+      .header p {
+        color: #000;
+      }
+      .print-footer {
+        text-align: center;
+        font-size: 10pt;
+        color: #555;
+        margin-top: 30px;
+        padding-top: 10px;
+        border-top: 1px solid #ccc;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .container {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Sidepanel -->
+    <div class="sidebar">
+      <h1 style="font-size: 1.8rem; color: #2c3e50; text-align: center; margin-bottom: 20px;">🚛 Registrer Avgang</h1>
+      <form id="departureForm">
+        <div class="form-group">
+          <label for="unitNumber">Enhetsnummer *</label>
+          <input type="text" id="unitNumber" required placeholder="F.eks. TOG001">
+        </div>
+        <div class="form-group">
+          <label for="destination">Destinasjon *</label>
+          <select id="destination" required>
+            <option value="">Velg destinasjon</option>
+            <option value="TRONDHEIM">TRONDHEIM</option>
+            <option value="ÅLESUND">ÅLESUND</option>
+            <option value="MOLDE">MOLDE</option>
+            <option value="FØRDE">FØRDE</option>
+            <option value="HAUGESUND">HAUGESUND</option>
+            <option value="STAVANGER">STAVANGER</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="time">Avgangstid *</label>
+          <input type="time" id="time" required>
+        </div>
+        <div class="form-group">
+          <label for="gate">Luke *</label>
+          <input type="text" id="gate" required placeholder="F.eks. A1, B2">
+        </div>
+        <div class="form-group">
+          <label for="type">Type *</label>
+          <select id="type" required>
+            <option value="">Velg type</option>
+            <option value="Tog">Tog</option>
+            <option value="Bil">Bil</option>
+            <option value="Tralle">Tralle</option>
+            <option value="Modul">Modul</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="status">Status *</label>
+          <select id="status" required>
+            <option value="">Velg status</option>
+            <option value="LEVERT">LEVERT</option>
+            <option value="LAGER">LAGER</option>
+            <option value="planlaget">Planlaget</option>
+            <option value="LASTER NÅ">LASTER</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="comment">Kommentar</label>
+          <textarea id="comment" placeholder="F.eks. Forsinket, laster nå..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">✅ Registrer Avgang</button>
+      </form>
+    </div>
+
+    <!-- Hovedinnhold -->
+    <div class="main-content">
+      <div class="header">
+        <h1>🚛 Transportsystem</h1>
+        <p>Registrering og oversikt over alle avganger</p>
+      </div>
+
+      <section class="section">
+        <h2><span class="icon">📋</span> Oversikt over Avganger</h2>
+        <div class="search-container">
+          <input type="text" id="searchInput" placeholder="Søk på enhetsnummer, destinasjon...">
+          <select id="filterDestination">
+            <option value="">Alle destinasjoner</option>
+            <option value="TRONDHEIM">TRONDHEIM</option>
+            <option value="ÅLESUND">ÅLESUND</option>
+            <option value="MOLDE">MOLDE</option>
+            <option value="FØRDE">FØRDE</option>
+            <option value="HAUGESUND">HAUGESUND</option>
+            <option value="STAVANGER">STAVANGER</option>
+          </select>
+        </div>
+        <div class="table-container">
+          <table id="departuresTable">
+            <thead>
+              <tr>
+                <th data-sort="unitNumber">Enhetsnummer</th>
+                <th data-sort="destination">Destinasjon</th>
+                <th data-sort="time">Tid</th>
+                <th data-sort="gate">Luke</th>
+                <th data-sort="type">Type</th>
+                <th data-sort="status">Status</th>
+                <th data-sort="comment">Kommentar</th>
+                <th>Handlinger</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      
+      </section>
+    
+      <!-- Systemhandlinger -->
+      <section class="section">
+        <h2><span class="icon">⚙️</span> Systemhandlinger</h2>
+        <div class="button-group">
+          <button class="btn btn-danger" onclick="clearAllDepartures()">🗑️ Tøm alle avganger</button>
+          <button class="btn btn-secondary" onclick="window.print()">🖨️ Skriv ut</button>
+          <button class="btn btn-success" onclick="exportToCSV()">📄 Eksporter til CSV</button>
+          <button class="btn btn-primary" onclick="backupData()">💾 Last ned backup (JSON)</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📂 Last opp backup (JSON)</button>
+          <input type="file"
+                id="importFile"
+                accept=".json"
+                style="display: none;"
+                onchange="importFromJSON(this)">
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    const form = document.getElementById('departureForm');
+    const searchInput = document.getElementById('searchInput');
+    const filterDestination = document.getElementById('filterDestination');
+    const tableBody = document.querySelector('#departuresTable tbody');
+    const toast = document.getElementById('toast');
+
+    let departures = JSON.parse(localStorage.getItem('departures')) || [];
+    let editingIndex = null;
+    let currentSort = { key: null, asc: true };
+
+    // Type-ikoner
+    const typeIcons = {
+      Tog: '🚂',
+      Bil: '🚗',
+      Tralle: '🛒',
+      Modul: '📦'
+    };
+
+    // --- Sett dagens tid ---
+    document.getElementById('time').value = new Date().toTimeString().slice(0, 5);
+
+    // --- Store bokstaver ---
+    document.getElementById('unitNumber').addEventListener('input', e => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+
+    // --- Toast ---
+    function showToast(message, type = 'info') {
+      const colors = { success: '#27ae60', error: '#e74c3c', info: '#3498db', delete: '#e74c3c', edit: '#f39c12' };
+      toast.textContent = message;
+      toast.style.backgroundColor = colors[type] || '#333';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // --- Oppdater tabell ---
+    function displayDepartures() {
+      const term = searchInput.value.toLowerCase();
+      const dest = filterDestination.value;
+      let filtered = departures.filter(d =>
+        (term === '' || d.unitNumber.toLowerCase().includes(term) || d.destination.toLowerCase().includes(term)) &&
+        (dest === '' || d.destination === dest)
+      );
+
+      if (currentSort.key) {
+        filtered.sort((a, b) => {
+          let av = a[currentSort.key] || '', bv = b[currentSort.key] || '';
+          if (currentSort.key === 'time') av = av.replace(':', ''), bv = bv.replace(':', '');
+          const res = av < bv ? -1 : av > bv ? 1 : 0;
+          return currentSort.asc ? res : -res;
+        });
+      }
+
+      tableBody.innerHTML = filtered.map(d => {
+        const tc = d.type === 'Tog' ? '#e74c3c' : d.type === 'Bil' ? '#f312e8' : d.type === 'Tralle' ? '#3498db' : '#9b59b6';
+        const sc = d.status === 'LEVERT' ? '#27ae60' : d.status === 'LAGER' ? '#3498db' : '#f312e8';
+        return `
+          <tr>
+            <td>${d.unitNumber}</td>
+            <td>${d.destination}</td>
+            <td>${d.time}</td>
+            <td>${d.gate}</td>
+            <td><span class="type-icon">${typeIcons[d.type]}</span><span style="color:${tc};font-weight:bold">${d.type}</span></td>
+            <td><span style="color:${sc};font-weight:bold">${d.status}</span></td>
+            <td>${d.comment || '<em>Ingen</em>'}</td>
+            <td class="action-buttons">
+              <button class="btn btn-secondary" onclick="editDeparture(${d.id})">✏️ Rediger</button>
+              <button class="btn btn-danger" onclick="deleteDeparture(${d.id})">🗑️ Slett</button>
+            </td>
+          </tr>`;
+      }).join('');
+
+      // Oppdater sorteringsindikatorer
+      document.querySelectorAll('th[data-sort]').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.sort === currentSort.key) th.classList.add(currentSort.asc ? 'sort-asc' : 'sort-desc');
+      });
+    }
+
+    // --- Sortering ---
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.sort;
+        currentSort.asc = currentSort.key === key ? !currentSort.asc : true;
+        currentSort.key = key;
+        displayDepartures();
+      });
+    });
+
+    // --- Skjema ---
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const data = {
+        id: editingIndex !== null ? departures[editingIndex].id : Date.now(),
+        unitNumber: document.getElementById('unitNumber').value.trim().toUpperCase(),
+        destination: document.getElementById('destination').value,
+        time: document.getElementById('time').value,
+        gate: document.getElementById('gate').value.trim(),
+        type: document.getElementById('type').value,
+        status: document.getElementById('status').value,
+        comment: document.getElementById('comment').value.trim() || null
+      };
+
+      if (Object.values(data).some(v => v === '' && v !== null)) {
+        showToast('Vennligst fyll ut alle obligatoriske felt.', 'info');
+        return;
+      }
+
+      if (editingIndex === null && departures.some(d => d.unitNumber === data.unitNumber)) {
+        showToast(`Enhetsnummer ${data.unitNumber} eksisterer allerede!`, 'info');
+        return;
+      }
+
+      if (editingIndex !== null) {
+        departures[editingIndex] = data;
+        editingIndex = null;
+        form.querySelector('button[type="submit"]').textContent = '✅ Registrer Avgang';
+        showToast('Oppdatert!', 'edit');
+      } else {
+        departures.push(data);
+        showToast('Registrert!', 'success');
+      }
+
+      localStorage.setItem('departures', JSON.stringify(departures));
+      displayDepartures();
+      form.reset();
+      document.getElementById('time').value = new Date().toTimeString().slice(0, 5);
+    });
+
+    // --- Rediger/slett ---
+    window.editDeparture = (id) => {
+      const idx = departures.findIndex(d => d.id === id);
+      if (idx === -1) return;
+      const d = departures[idx];
+      Object.keys(d).forEach(k => {
+        if (document.getElementById(k)) document.getElementById(k).value = d[k];
+      });
+      editingIndex = idx;
+      form.querySelector('button[type="submit"]').textContent = '🔁 Oppdater';
+      window.scrollTo(0, 0);
+    };
+
+    window.deleteDeparture = (id) => {
+      if (confirm('Slette denne avgangen?')) {
+        departures = departures.filter(d => d.id !== id);
+        localStorage.setItem('departures', JSON.stringify(departures));
+        displayDepartures();
+        showToast('Slettet!', 'delete');
+      }
+    };
+
+    window.clearAllDepartures = () => {
+      if (departures.length === 0) {
+        showToast('Ingen avganger å slette.', 'info');
+        return;
+      }
+      if (confirm('Slette ALLE avganger?')) {
+        departures = [];
+        localStorage.removeItem('departures');
+        displayDepartures();
+        showToast('Alt tømt!', 'delete');
+      }
+    };
+
+    // --- Eksport ---
+    function exportToCSV() {
+      const headers = ['Enhetsnummer','Destinasjon','Tid','Luke','Type','Status','Kommentar'];
+      const rows = departures.map(d => [
+        d.unitNumber, d.destination, d.time, d.gate, d.type, d.status, d.comment || ''
+      ].map(s => `"${s}"`).join(','));
+      downloadFile([headers.join(','), ...rows].join('\n'), `avganger_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv');
+      showToast('Eksportert til CSV!', 'success');
+    }
+
+    function backupData() {
+      downloadFile(JSON.stringify(departures, null, 2), `backup_${new Date().toISOString().slice(0,10)}.json`, 'application/json');
+      showToast('Backup lastet ned!', 'info');
+    }
+
+    function downloadFile(content, filename, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    function importFromJSON(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+
+          // Valider at det er en array med gyldige avganger
+          if (Array.isArray(imported) && imported.every(d => d.id && d.unitNumber && d.destination)) {
+            // Spør om brukeren vil erstatte eller flette sammen
+            const overwrite = confirm(
+              `Fant ${imported.length} avganger i filen.\n\nTrykk 'OK' for å ERSTATTE alle eksisterende avganger.\nTrykk 'Avbryt' for å LEGGE TIL sammen med eksisterende.`
+            );
+
+            if (overwrite) {
+              departures = imported;
+            } else {
+              // Flett sammen – unngå duplikater basert på enhetsnummer (eller id)
+              const existingIds = new Set(departures.map(d => d.id));
+              let importedCount = 0;
+              imported.forEach(d => {
+                if (!existingIds.has(d.id)) {
+                  departures.push(d);
+                  importedCount++;
+                }
+              });
+              showToast(`Lagt til ${importedCount} nye avganger.`, 'info');
+            }
+
+            localStorage.setItem('departures', JSON.stringify(departures));
+            displayDepartures();
+            showToast('Data importert!', 'success');
+          } else {
+            throw new Error('Ugyldig format');
+          }
+        } catch (err) {
+          showToast('Feil ved lesing av JSON-fil!', 'error');
+          console.error(err);
+        }
+      };
+      reader.readAsText(file);
+      input.value = ''; // Reset input
+    }
+
+    // --- Init ---
+    displayDepartures();
+    searchInput.addEventListener('input', displayDepartures);
+    filterDestination.addEventListener('change', displayDepartures);
+  </script>
+</body>
+</html>
