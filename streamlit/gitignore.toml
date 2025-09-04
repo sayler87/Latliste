@@ -2,6 +2,8 @@
 # Tillat at HTML/CSS/JS fungerer bedre i iframe
 enableXsrfProtection = false
 enableCORS = false
+headless = true
+runOnSave = true
 
 [client]
 # Forbedret støtte for kutt-og-lim i nettleser
