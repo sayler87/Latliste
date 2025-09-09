@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🚛 Registrer Avganger - Transportsystem</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+</head>
+<body>
+  <div class="container">
+    <!-- Sidepanel -->
+    <div class="sidebar">
+      <h1 style="font-size: 1.8rem; color: #2c3e50; text-align: center; margin-bottom: 20px;">🚛 Registrer Avgang</h1>
+      <form id="departureForm">
+        <div class="form-group">
+          <label for="unitNumber">Enhetsnummer *</label>
+          <input type="text" id="unitNumber" required placeholder="F.eks. TOG001">
+        </div>
+        <div class="form-group">
+          <label for="destination">Destinasjon *</label>
+          <select id="destination" required>
+            <option value="">Velg destinasjon</option>
+            <option value="TRONDHEIM">TRONDHEIM</option>
+            <option value="ÅLESUND">ÅLESUND</option>
+            <option value="MOLDE">MOLDE</option>
+            <option value="FØRDE">FØRDE</option>
+            <option value="HAUGESUND">HAUGESUND</option>
+            <option value="STAVANGER">STAVANGER</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="time">Avgangstid *</label>
+          <input type="time" id="time" required>
+        </div>
+        <div class="form-group">
+          <label for="gate">Luke *</label>
+          <input type="text" id="gate" required placeholder="F.eks. A1, B2">
+        </div>
+        <div class="form-group">
+          <label for="type">Type *</label>
+          <select id="type" required>
+            <option value="">Velg type</option>
+            <option value="Tog">Tog</option>
+            <option value="Bil">Bil</option>
+            <option value="Tralle">Tralle</option>
+            <option value="Modul">Modul</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="status">Status *</label>
+          <select id="status" required>
+            <option value="">Velg status</option>
+            <option value="LEVERT">LEVERT</option>
+            <option value="LAGER">LAGER</option>
+            <option value="planlaget">Planlaget</option>
+            <option value="LASTER NÅ">LASTER</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="comment">Kommentar</label>
+          <textarea id="comment" placeholder="F.eks. Forsinket, laster nå..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">✅ Registrer Avgang</button>
+      </form>
+    </div>
+
+    <!-- Hovedinnhold -->
+    <div class="main-content">
+      <div class="header">
+        <h1>🚛 Transportsystem</h1>
+        <p>Registrering og oversikt over alle avganger</p>
+      </div>
+      
+    
+
+      <section class="section">
+        <h2><span class="icon">📋</span> Oversikt over Avganger</h2>
+        <div class="search-container">
+          <input type="text" id="searchInput" placeholder="Søk på enhetsnummer, destinasjon...">
+          <select id="filterDestination">
+            <option value="">Alle destinasjoner</option>
+            <option value="TRONDHEIM">TRONDHEIM</option>
+            <option value="ÅLESUND">ÅLESUND</option>
+            <option value="MOLDE">MOLDE</option>
+            <option value="FØRDE">FØRDE</option>
+            <option value="HAUGESUND">HAUGESUND</option>
+            <option value="STAVANGER">STAVANGER</option>
+          </select>
+        </div>
+        <div class="table-container">
+          <table id="departuresTable">
+            <thead>
+              <tr>
+                <th data-sort="unitNumber">Enhetsnummer</th>
+                <th data-sort="destination">Destinasjon</th>
+                <th data-sort="time">Tid</th>
+                <th data-sort="gate">Luke</th>
+                <th data-sort="type">Type</th>
+                <th data-sort="status">Status</th>
+                <th data-sort="comment">Kommentar</th>
+                <th>Handlinger</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+           <!-- Systemhandlinger -->
+      <section class="section">
+        <h2><span class="icon">⚙️</span> Systemhandlinger</h2>
+        <div class="button-group">
+          <button class="btn btn-danger" onclick="clearAllDepartures()">🗑️ Tøm alle avganger</button>
+          <button class="btn btn-secondary" onclick="window.print()">🖨️ Skriv ut</button>
+          <button class="btn btn-success" onclick="exportToCSV()">📄 Eksporter til CSV</button>
+          <button class="btn btn-primary" onclick="backupData()">💾 Last ned backup (JSON)</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📂 Last opp backup (JSON)</button>
+          <input type="file"
+                id="importFile"
+                accept=".json"
+                style="display: none;"
+                onchange="importFromJSON(this)">
+        </div>
+      </section>
+      </div>
+
+        <!-- Siste sync -->
+    <div class="sync-status">
+      Siste sync: <span id="lastSync">Aldri</span>
+  
+
+    <!-- Statistikk-seksjon -->
+    <section class="section stats-section">
+    <h2><span class="icon">📊</span> Statistikk</h2>
+    <div class="stats-container">
+    <div class="stat-card total">
+      <div class="stat-number" id="totalDepartures">0</div>
+      <div class="stat-label">Totalt</div>
+    </div>
+
+    <div class="stat-card dest">
+      <div class="stat-number" id="destTRONDHEIM">0</div>
+      <div class="stat-label">TRONDHEIM</div>
+    </div>
+    <div class="stat-card dest">
+      <div class="stat-number" id="destÅLESUND">0</div>
+      <div class="stat-label">ÅLESUND</div>
+    </div>
+    <div class="stat-card dest">
+      <div class="stat-number" id="destMOLDE">0</div>
+      <div class="stat-label">MOLDE</div>
+    </div>
+    <div class="stat-card dest">
+      <div class="stat-number" id="destFØRDE">0</div>
+      <div class="stat-label">FØRDE</div>
+    </div>
+    <div class="stat-card dest">
+      <div class="stat-number" id="destHAUGESUND">0</div>
+      <div class="stat-label">HAUGESUND</div>
+    </div>
+    <div class="stat-card dest">
+      <div class="stat-number" id="destSTAVANGER">0</div>
+      <div class="stat-label">STAVANGER</div>
+    </div>
+
+    <div class="stat-card status">
+      <div class="stat-number" id="statusLEVERT">0</div>
+      <div class="stat-label">LEVERT</div>
+    </div>
+    <div class="stat-card status">
+      <div class="stat-number" id="statusLAGER">0</div>
+      <div class="stat-label">LAGER</div>
+    </div>
+    <div class="stat-card status">
+      <div class="stat-number" id="statusPlanlaget">0</div>
+      <div class="stat-label">Planlaget</div>
+    </div>
+    <div class="stat-card status">
+      <div class="stat-number" id="statusLASTER">0</div>
+      <div class="stat-label">LASTER</div>
+    </div>
+  </section> <span id="lastSync"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
